@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "JQ1QRxpE/RzUtO94e6O/IBh+dV/cPoojXlsNbyUXcbXhJM6WWddstFlgWQybiawotRxtgTkVPB2A6fx1+0+J8w==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\user\\OneDrive\\Dokumenty\\Desktop Documents\\Projects\\MatFyz\\WinForms\\Graphs\\Graphs\\Graphs.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\5.0.14\\microsoft.netcore.app.host.win-x64.5.0.14.nupkg.sha512"
+  ],
+  "logs": []
+}
