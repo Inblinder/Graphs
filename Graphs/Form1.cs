@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -17,7 +17,7 @@ namespace Graphs
         int[,] adjMatrix = new int[8, 8];
         int origin;
         int termin;
-        bool drag = false;
+        public bool drag = false;
         Pen penPrevState;
         Point prevMousePos;
         Point pos;
@@ -48,11 +48,7 @@ namespace Graphs
 
                 vertices.Add(new Vertex(pos, vertices.Count + 1, splitContainer.Panel1));
                 PrintMatrix(vertices.Count);
-
-                Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
-                Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
-                penPrevState = new Pen(new TextureBrush(bmpPrevState), 12);
-                penPrevState.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                TakeAScreenshot();
 
                 fixedUpdate.Start();
             }
@@ -87,17 +83,58 @@ namespace Graphs
             matrix.Text = m;
         }
 
+        public void TakeAScreenshot()
+        {
+            Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
+            Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
+            penPrevState = new Pen(new TextureBrush(bmpPrevState), 15);
+            penPrevState.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        }
+
+        public static void Clicked(Vertex sender)
+        {
+            if (Program.f1.drag == true)
+            {
+                Program.f1.edges.Add(new Edge(Program.f1.origin, sender.num, Program.f1.edges.Count + 1));                
+                Program.f1.AdjustMatrix(Program.f1.origin, sender.num, Program.f1.edges.Count);                
+            }
+            else {Program.f1.drag = true;}
+
+            Program.f1.origin = sender.num;
+            Program.f1.pos = sender.pos;
+            Program.f1.PrintMatrix(Program.f1.vertices.Count());
+            Program.f1.TakeAScreenshot();
+            Program.f1.fixedUpdate.Start();
+        }
+
+        public void CheckIfHovered(ref Vertex hovered, ref bool connect)
+        {
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                if (vertices[i].hover == true)
+                {
+                    hovered = vertices[i];
+                    connect = true;
+                }
+            }
+        }
+
         private void fixedUpdate_Tick(object sender, EventArgs e)
         {
-            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition))
+            Vertex hovered = null;
+            bool connect = false;
+            CheckIfHovered(ref hovered, ref connect);
+
+            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition)) //&& prevMousePos != hovered.pos)
             {
                 Graphics g = splitContainer.Panel1.CreateGraphics();
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                 g.DrawLine(penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y));
-                prevMousePos = splitContainer.Panel1.PointToClient(MousePosition);
                 Pen whtPen = new Pen(Color.White, 10);
                 whtPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-                g.DrawLine(whtPen, pos, prevMousePos);
+
+                if (connect == true) { prevMousePos = hovered.pos; g.DrawLine(whtPen, pos, hovered.pos); }
+                else { prevMousePos = splitContainer.Panel1.PointToClient(MousePosition); g.DrawLine(whtPen, pos, prevMousePos); }
             }
         }
     }
@@ -107,6 +144,7 @@ namespace Graphs
         public int num;
         public Point pos;
         PictureBox dotka;
+        public bool hover = false;
          
         public Vertex(Point pos, int num, Panel panel_one)
         {
@@ -118,7 +156,37 @@ namespace Graphs
             dotka.Location = new Point(pos.X - 15, pos.Y - 15);
             dotka.SizeMode = PictureBoxSizeMode.StretchImage;
             dotka.Image = Properties.Resources.dot;
+            dotka.MouseEnter += Dotka_MouseEnter;
+            dotka.MouseLeave += Dotka_MouseLeave;
+            dotka.MouseClick += Dotka_MouseClick;
+            dotka.Tag = this;
             panel_one.Controls.Add(dotka);
+        }
+
+        private void Dotka_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Form1.Clicked((Vertex)((PictureBox)sender).Tag);
+            }
+            else
+            {
+                //if () dotka.Dispose();
+            }
+        }
+
+        private void Dotka_MouseEnter(object sender, EventArgs e)
+        {
+            hover = true;
+            dotka.Location = new Point(dotka.Location.X - 3, dotka.Location.Y - 3);
+            dotka.Size = new Size(35, 35);
+        }
+
+        private void Dotka_MouseLeave(object sender, EventArgs e)
+        {
+            dotka.Location = new Point(dotka.Location.X + 3, dotka.Location.Y + 3);
+            dotka.Size = new Size(30, 30);
+            hover = false;
         }
     }
 
