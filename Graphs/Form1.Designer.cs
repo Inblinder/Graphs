@@ -1,4 +1,4 @@
-﻿
+
 namespace Graphs
 {
     partial class Form1
