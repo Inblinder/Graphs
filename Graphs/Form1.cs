@@ -19,19 +19,25 @@ namespace Graphs
         int termin;
         public bool drag = false;
         Pen penPrevState;
+        TextureBrush prevState;
         Point prevMousePos;
         Point pos;
+        Vertex hVertex = null;
 
         public Form1()
         {
             InitializeComponent();
         }
 
-        public void CreateVertex(object sender, MouseEventArgs e)
+        private void Clicked(object sender, MouseEventArgs e)
         {
+            Graphics g = splitContainer.Panel1.CreateGraphics();          
+
             if (e.Button == MouseButtons.Left)
             {
                 pos = e.Location;
+
+                if (hVertex != null) { LeftClickedVertex(hVertex); return; }
 
                 if (drag)
                 {
@@ -46,18 +52,20 @@ namespace Graphs
                     drag = true;
                 }
 
-                vertices.Add(new Vertex(pos, vertices.Count + 1, splitContainer.Panel1));
+                vertices.Add(new Vertex(pos, vertices.Count + 1));
+                DrawVertex(g, pos, new Size(30, 30));
                 PrintMatrix(vertices.Count);
-                TakeAScreenshot();
-
+                prevState = TakeAScreenshot();
+                penPrevState = new Pen(prevState, 15);
                 dragUpdate.Start();
             }
             else
             {
+                if (hVertex != null) { DeleteVertex(hVertex); return; }
+
                 dragUpdate.Stop();
-                Graphics g = splitContainer.Panel1.CreateGraphics(); // misto tohohle funkce drawLine
-                g.DrawLine(penPrevState, pos, prevMousePos);
                 drag = false;
+                DrawEdge(g, penPrevState, pos, prevMousePos);
             } 
         }
 
@@ -99,152 +107,164 @@ namespace Graphs
             return m;
         }
 
-        public void TakeAScreenshot() // chci pero nebo premalovat celou obrazovku? co bude jednodusi?
+        public TextureBrush TakeAScreenshot()
         {
             Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
             Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
-            penPrevState = new Pen(new TextureBrush(bmpPrevState), 15);
-            penPrevState.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+            return new TextureBrush(bmpPrevState);
         }
 
-        public static void Clicked(Vertex sender)
+        public void LeftClickedVertex(Vertex sender)
         {
-            if (Program.f1.drag == true)
+            if (drag == true)
             {
-                Program.f1.edges.Add(new Edge(Program.f1.origin, sender.num, Program.f1.edges.Count + 1));                
-                Program.f1.AdjustMatrix(Program.f1.origin, sender.num, Program.f1.edges.Count);                
+                edges.Add(new Edge(origin, sender.num, edges.Count + 1));
+                AdjustMatrix(origin, sender.num, edges.Count);
             }
-            else {Program.f1.drag = true;}
+            else drag = true;
 
-            Program.f1.origin = sender.num;
-            Program.f1.pos = sender.pos;
-            Program.f1.PrintMatrix(Program.f1.vertices.Count());
-            Program.f1.TakeAScreenshot();
-            Program.f1.dragUpdate.Start();
+            origin = sender.num;
+            pos = sender.pos;
+            PrintMatrix(vertices.Count());
+            prevState = TakeAScreenshot();
+            penPrevState = new Pen(prevState, 15);
+            dragUpdate.Start();
         }
 
-        public static void DeleteVertex(Vertex sender)
+        public void DeleteVertex(Vertex sender)
         {
-            if (Program.f1.drag != true)
+            if (drag != true)
             {
-                for (int i = 0; i < Program.f1.edges.Count; i++)
+                for (int i = 0; i < edges.Count; i++)
                 {
-                    if (Program.f1.edges[i].v_1 == sender.num || Program.f1.edges[i].v_2 == sender.num)
+                    if (edges[i].v_1 == sender.num || edges[i].v_2 == sender.num)
                     {
-                        Program.f1.edges.RemoveAt(i); // mozna jinak zaznamenavat edges abych zlepsil cas
-
+                        edges.RemoveAt(i); // mozna jinak zaznamenavat edges abych zlepsil cas
+                       // mazat edges
                     }
                 }
 
-                Program.f1.vertices.Remove(sender);
-                Program.f1.splitContainer.Panel1.Controls.Remove(sender.dotka);
-                sender.dotka = null;
+                // přemazat vertex
+                vertices.Remove(sender);
                 // zmenit cisla vrcholů
-                Program.f1.RedrawEdges();
-                Program.f1.PrintMatrix(Program.f1.vertices.Count());
+                RedrawEdges();
+                PrintMatrix(vertices.Count());
             }
         }
 
         public void RedrawEdges()
         {
             Graphics g = splitContainer.Panel1.CreateGraphics();
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-            Pen whtPen = new Pen(Color.White, 10);
-            whtPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
 
-            foreach (Edge edge in edges)
-            { // nefunguje
-                //g.DrawLine(whtPen, vertices[edge.v_1].pos, vertices[edge.v_2].pos); // vymyslet jiny ukladani vrcholu a edges
-            }
+            foreach (Edge edge in edges) DrawEdge(g, new Pen(Color.White, 10), edge.pos1, edge.pos2);
         }
 
-        public void RedrawOrientedEdges() { }  //dodelat
-
-        public void drawLine(Graphics g, Color color, float width, int pt1, int pt2)
+        public void RedrawVertices()
         {
-            // doplnit
-        }
+            Graphics g = splitContainer.Panel1.CreateGraphics();
 
-        public void CheckIfHovered(ref Vertex hovered, ref bool connect)
-        {
-            for (int i = 0; i < vertices.Count; i++)
+            foreach (Vertex vertex in vertices)
             {
-                if (vertices[i].hover == true)
-                {
-                    hovered = vertices[i];
-                    connect = true;
-                }
+                //DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
+                DrawVertex(g, vertex.pos, new Size(30, 30));
             }
+        }
+
+        public void DrawEdge(Graphics g, Pen pen, Point pt1, Point pt2)
+        {
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+            g.DrawLine(pen, pt1, pt2);
+        }
+
+        public void DrawVertex(Graphics g, Point location, Size size, TextureBrush brush = null)
+        {
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            if (brush != null) g.FillEllipse(brush, new Rectangle(location.X - (size.Width / 2), location.Y - (size.Height / 2), size.Width, size.Height));
+            else g.FillEllipse(Brushes.White, new Rectangle(location.X - (size.Width / 2), location.Y - (size.Height / 2), size.Width, size.Height));
+        }
+
+        public Vertex GetHoveredVertex(Point mPos)
+        {
+            foreach (Vertex vertex in vertices)
+            {
+                if (Math.Sqrt((mPos.X - vertex.pos.X) * (mPos.X - vertex.pos.X) + (mPos.Y - vertex.pos.Y) * (mPos.Y - vertex.pos.Y)) <= vertex.radius)
+                    return vertex;
+            }
+
+            return null;
+        }
+
+        public Vertex Hovered(Vertex vertex)
+        {
+            if (vertex == hVertex) return vertex;
+            Graphics g = splitContainer.Panel1.CreateGraphics();
+
+            if (vertex == null)
+            {
+                hVertex.radius = 15;
+                DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
+            }
+            else
+            {
+                if (hVertex != null)
+                {
+                    hVertex.radius = 15;
+                    DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
+                }
+                vertex.radius = 20;
+                DrawVertex(g, vertex.pos, new Size(40, 40));
+            }
+
+            return vertex;
         }
 
         private void dragUpdate_Tick(object sender, EventArgs e)
         {
-            Vertex hovered = null;
-            bool connect = false;
-            CheckIfHovered(ref hovered, ref connect); // tady to předělat -> místo toho někde event handler
-            // dodělat někde v nějakym jinym timeru (fixedUpdatu, kterej by detekoval jestli se dotykam hran)
-
-            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition)) //&& prevMousePos != hovered.pos)
+            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition))
             {
-                Graphics g = splitContainer.Panel1.CreateGraphics(); // mam pokazdy tvorit novou graphics? popr jak ji muzu disposnout / odstranit
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                g.DrawLine(penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y));
+                Graphics g = splitContainer.Panel1.CreateGraphics();
                 Pen whtPen = new Pen(Color.White, 10);
-                whtPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
 
-                if (connect == true) { prevMousePos = hovered.pos; g.DrawLine(whtPen, pos, hovered.pos); }
-                else { prevMousePos = splitContainer.Panel1.PointToClient(MousePosition); g.DrawLine(whtPen, pos, prevMousePos); }
+                if (hVertex != null)
+                { 
+                    if (hVertex.pos != prevMousePos)
+                    {
+                        DrawEdge(g, penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y));
+                        DrawVertex(g, hVertex.pos, new Size(40, 40));
+                        prevMousePos = hVertex.pos;
+                    }
+                }
+                else { DrawEdge(g, penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y)); prevMousePos = splitContainer.Panel1.PointToClient(MousePosition); }
+
+                DrawEdge(g, whtPen, pos, prevMousePos);
             }
         }
 
-        private void copyBtn_Click(object sender, EventArgs e)
+        private void fixedUpdate_Tick(object sender, EventArgs e)
         {
-            Clipboard.SetText(MatrixToString(vertices.Count));
+            Point mPos = splitContainer.Panel1.PointToClient(MousePosition);
+            hVertex = Hovered(GetHoveredVertex(mPos));
+
+            // nebo na jedné z edges
+            foreach (Edge edge in edges) { }
         }
+
+        private void fixedUpdate_Start(object sender, EventArgs e) { fixedUpdate.Start(); }
+        private void fixedUpdate_End(object sender, EventArgs e) { fixedUpdate.Stop(); }
+        private void copyBtn_Click(object sender, EventArgs e) { Clipboard.SetText(MatrixToString(vertices.Count)); }
     }
 
     public class Vertex
     {
         public int num;
+        public int radius = 15;
         public Point pos;
-        public PictureBox dotka;
-        public bool hover = false;
          
-        public Vertex(Point pos, int num, Panel panel_one)
+        public Vertex(Point pos, int num)
         {
             this.pos = pos;
             this.num = num;
-            
-            dotka = new PictureBox(); // rozmyslet si jestli nebude jednodusi tvorit picturebox v Form1 třídě
-            dotka.Size = new Size(30, 30);
-            dotka.Location = new Point(pos.X - 15, pos.Y - 15);
-            dotka.SizeMode = PictureBoxSizeMode.StretchImage;
-            dotka.Image = Properties.Resources.dot;
-            dotka.MouseEnter += Dotka_MouseEnter;
-            dotka.MouseLeave += Dotka_MouseLeave;
-            dotka.MouseClick += Dotka_MouseClick;
-            dotka.Tag = this;
-            panel_one.Controls.Add(dotka);
-        }
-
-        private void Dotka_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left) Form1.Clicked((Vertex)((PictureBox)sender).Tag);
-            else { Form1.DeleteVertex((Vertex)((PictureBox)sender).Tag); }
-        }
-
-        private void Dotka_MouseEnter(object sender, EventArgs e)
-        {
-            hover = true;
-            dotka.Location = new Point(dotka.Location.X - 3, dotka.Location.Y - 3);
-            dotka.Size = new Size(35, 35);
-        }
-
-        private void Dotka_MouseLeave(object sender, EventArgs e)
-        {
-            dotka.Location = new Point(dotka.Location.X + 3, dotka.Location.Y + 3);
-            dotka.Size = new Size(30, 30);
-            hover = false;
         }
     }
 
@@ -253,6 +273,8 @@ namespace Graphs
         private int num;
         public int v_1;
         public int v_2;
+        public Point pos1;
+        public Point pos2;
 
         public Edge(int v_1, int v_2, int num)
         {

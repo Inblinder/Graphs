@@ -39,6 +39,7 @@ namespace Graphs
             this.matrix = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.dragUpdate = new System.Windows.Forms.Timer(this.components);
+            this.fixedUpdate = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
@@ -60,7 +61,9 @@ namespace Graphs
             this.splitContainer.Panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(28)))), ((int)(((byte)(36)))));
             this.splitContainer.Panel1.Controls.Add(this.label2);
             this.splitContainer.Panel1.Cursor = System.Windows.Forms.Cursors.Arrow;
-            this.splitContainer.Panel1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.CreateVertex);
+            this.splitContainer.Panel1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Clicked);
+            this.splitContainer.Panel1.MouseEnter += new System.EventHandler(this.fixedUpdate_Start);
+            this.splitContainer.Panel1.MouseLeave += new System.EventHandler(this.fixedUpdate_End);
             // 
             // splitContainer.Panel2
             // 
@@ -149,6 +152,11 @@ namespace Graphs
             this.dragUpdate.Interval = 20;
             this.dragUpdate.Tick += new System.EventHandler(this.dragUpdate_Tick);
             // 
+            // fixedUpdate
+            // 
+            this.fixedUpdate.Interval = 20;
+            this.fixedUpdate.Tick += new System.EventHandler(this.fixedUpdate_Tick);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
@@ -187,6 +195,7 @@ namespace Graphs
         private System.Windows.Forms.Button insertBtn;
         private System.Windows.Forms.Panel panelMatrix;
         private System.Windows.Forms.Button copyBtn;
+        private System.Windows.Forms.Timer fixedUpdate;
     }
 }
 

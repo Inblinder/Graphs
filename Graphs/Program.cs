@@ -8,7 +8,6 @@ namespace Graphs
 {
     static class Program
     {
-        public static Form1 f1 = new Form1(); // chci to static?
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -18,7 +17,7 @@ namespace Graphs
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(f1);
+            Application.Run(new Form1());
         }
     }
 }
