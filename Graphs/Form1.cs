@@ -15,14 +15,14 @@ namespace Graphs
         List<Vertex> vertices = new List<Vertex>();
         List<Edge> edges = new List<Edge>();
         int[,] adjMatrix = new int[8, 8];
-        int origin;
-        int termin;
+        Vertex origin; Vertex termin;
         public bool drag = false;
         Pen penPrevState;
         TextureBrush prevState;
         Point prevMousePos;
         Point pos;
         Vertex hVertex = null;
+        Edge hEdge = null;
 
         public Form1()
         {
@@ -31,7 +31,7 @@ namespace Graphs
 
         private void Clicked(object sender, MouseEventArgs e)
         {
-            Graphics g = splitContainer.Panel1.CreateGraphics();          
+            Graphics g = splitContainer.Panel1.CreateGraphics();
 
             if (e.Button == MouseButtons.Left)
             {
@@ -41,44 +41,50 @@ namespace Graphs
 
                 if (drag)
                 {
-                    termin = vertices.Count + 1;
-                    edges.Add(new Edge(origin, termin, edges.Count + 1));
-                    AdjustMatrix(origin, termin, edges.Count);
+                    termin = new Vertex(pos, vertices.Count + 1);
+                    edges.Add(new Edge(origin, termin));
+                    AdjustMatrix(origin.num, termin.num, edges.Count, 1);
                     origin = termin;
                 }
                 else
                 {
-                    origin = vertices.Count + 1;
+                    if (hEdge != null) { LeftClickedEdge(hEdge, pos); return; }
+                    origin = new Vertex(pos, vertices.Count + 1);
                     drag = true;
                 }
 
-                vertices.Add(new Vertex(pos, vertices.Count + 1));
+                vertices.Add(origin);
                 DrawVertex(g, pos, new Size(30, 30));
                 PrintMatrix(vertices.Count);
-                prevState = TakeAScreenshot();
-                penPrevState = new Pen(prevState, 15);
+                CapturePreviousState();
                 dragUpdate.Start();
             }
             else
             {
-                if (hVertex != null) { DeleteVertex(hVertex); return; }
-
-                dragUpdate.Stop();
-                drag = false;
-                DrawEdge(g, penPrevState, pos, prevMousePos);
-            } 
+                if (drag == false)
+                {
+                    if (hVertex != null) { DeleteVertex(hVertex); return; }
+                    if (hEdge != null) { DeleteEdge(hEdge); return; }
+                }
+                else
+                {
+                    dragUpdate.Stop();
+                    drag = false;
+                    DrawEdge(g, penPrevState, pos, prevMousePos);
+                }
+            }
         }
 
-        public void AdjustMatrix(int v_1, int v_2, int edge_count)
+        public void AdjustMatrix(int v_1, int v_2, int edge_count, int val)
         {
             int size = adjMatrix.GetLength(0);
             if (vertices.Count >= size)
             {
                 adjMatrix = new int[size * 2, size * 2];
-                for (int i = 0; i < edge_count; i++) { adjMatrix[edges[i].v_1 - 1, edges[i].v_2 - 1] = 1; adjMatrix[edges[i].v_2 - 1, edges[i].v_1 - 1] = 1; }
+                for (int i = 0; i < edge_count; i++) { adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = 1; adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = 1; }
             }
             
-            adjMatrix[v_1 - 1, v_2 - 1] = 1; adjMatrix[v_2 - 1, v_1 - 1] = 1;
+            adjMatrix[v_1 - 1, v_2 - 1] = val; adjMatrix[v_2 - 1, v_1 - 1] = val;
         }
 
         public void PrintMatrix(int vertex_count)
@@ -107,65 +113,142 @@ namespace Graphs
             return m;
         }
 
-        public TextureBrush TakeAScreenshot()
+        public void CapturePreviousState()
         {
-            Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
-            Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
-            return new TextureBrush(bmpPrevState);
+            TextureBrush TakeAScreenshot()
+            {
+                Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
+                Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
+                return new TextureBrush(bmpPrevState);
+            }
+
+            prevState = TakeAScreenshot();
+            penPrevState = new Pen(prevState, 15);
+        }      
+
+        public float EvalDistance(Point a, Point b)
+        {
+            return (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+        }
+
+        public void ScaleVector(int mag, ref int u1, ref int u2)
+        {
+            float k = (float)Math.Sqrt(mag*mag / ((float)u1*u1 + (float)u2*u2));
+            u1 = (int)(k * u1); u2 = (int)(k * u2);
         }
 
         public void LeftClickedVertex(Vertex sender)
         {
             if (drag == true)
             {
-                edges.Add(new Edge(origin, sender.num, edges.Count + 1));
-                AdjustMatrix(origin, sender.num, edges.Count);
+                foreach (Edge edge in edges)
+                    if (edge.v1 == origin && edge.v2 == sender || edge.v2 == origin && edge.v1 == sender) { return; }
+                edges.Add(new Edge(origin, sender));
+                AdjustMatrix(origin.num, sender.num, edges.Count, 1);
             }
-            else drag = true;
+            else { drag = true; }
 
-            origin = sender.num;
+            origin = sender;
             pos = sender.pos;
             PrintMatrix(vertices.Count());
-            prevState = TakeAScreenshot();
-            penPrevState = new Pen(prevState, 15);
+            CapturePreviousState();
             dragUpdate.Start();
+        }
+
+        // dodelat + vyresit hover (mozna vzdycky PaintOver je jistejsi) + adjustnout matici
+        public void LeftClickedEdge(Edge sender, Point pos)
+        {
+            float fromV1 = EvalDistance(pos, sender.v1.pos);
+            float fromV2 = EvalDistance(pos, sender.v2.pos);
+            Vertex closerV;
+
+            if (Math.Min(fromV1, fromV2) < 40)
+            {
+                Graphics g = splitContainer.Panel1.CreateGraphics();
+                Point pt;
+                int u1 = sender.v1.pos.X - sender.v2.pos.X;
+                int u2 = sender.v1.pos.Y - sender.v2.pos.Y;
+                ScaleVector(35, ref u1, ref u2);
+                float lengthOfEdge = EvalDistance(sender.v1.pos, sender.v2.pos);
+
+                if (fromV1 < fromV2)
+                {
+                    closerV = sender.v1;
+                    if (EvalDistance(new Point(closerV.pos.X + u1, closerV.pos.Y + u2), sender.v2.pos) < lengthOfEdge) pt = new Point(closerV.pos.X + u1, closerV.pos.Y + u2);
+                    else pt = new Point((closerV.pos.X - u1), (closerV.pos.Y - u2));
+                }
+                else
+                {
+                    closerV = sender.v2;
+                    if (EvalDistance(new Point(closerV.pos.X + u1, closerV.pos.Y + u2), sender.v1.pos) < lengthOfEdge) pt = new Point(closerV.pos.X + u1, closerV.pos.Y + u2);
+                    else pt = new Point((closerV.pos.X - u1), (closerV.pos.Y - u2));
+                }
+                
+                ScaleVector(15, ref u1, ref u2);
+                sender.oriented = true;
+                sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
+                
+                //nebo PaintOver
+                DrawEdge(g, new Pen(Color.White, 10), closerV.pos, sender.ptsArrow[1]);
+                DrawEdge(g, new Pen(Color.White, 10), closerV.pos, sender.ptsArrow[2]);
+            }
+            else
+            {
+                
+            }
         }
 
         public void DeleteVertex(Vertex sender)
         {
-            if (drag != true)
-            {
-                for (int i = 0; i < edges.Count; i++)
-                {
-                    if (edges[i].v_1 == sender.num || edges[i].v_2 == sender.num)
-                    {
-                        edges.RemoveAt(i); // mozna jinak zaznamenavat edges abych zlepsil cas
-                       // mazat edges
-                    }
-                }
+            for (int i = edges.Count - 1; i >= 0; i--)
+                if (edges[i].v1 == sender || edges[i].v2 == sender) edges.RemoveAt(i);
 
-                // přemazat vertex
-                vertices.Remove(sender);
-                // zmenit cisla vrcholů
-                RedrawEdges();
-                PrintMatrix(vertices.Count());
+            int removedNum = sender.num;
+            vertices.Remove(sender);
+
+            foreach (Vertex vertex in vertices)
+                if (vertex.num > removedNum) vertex.num -= 1;
+
+            PaintOver(splitContainer.Panel1.CreateGraphics());
+            CapturePreviousState();
+            PrintMatrix(vertices.Count());
+        }
+
+        public void DeleteEdge(Edge sender)
+        {
+            AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count - 1, 0);
+            sender.oriented = false;
+            edges.Remove(sender);
+            PaintOver(splitContainer.Panel1.CreateGraphics());
+            CapturePreviousState();
+            PrintMatrix(vertices.Count());
+        }
+
+        public void PaintOver(Graphics g)
+        {
+            SolidBrush brush = new SolidBrush(Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(28)))), ((int)(((byte)(36))))));
+            g.FillRectangle(brush, new Rectangle(0, 0, splitContainer.Panel1.Width, splitContainer.Panel1.Height));
+            RedrawEdges(g);
+            RedrawVertices(g);
+        }
+
+        public void RedrawEdges(Graphics g)
+        {
+            foreach (Edge edge in edges)
+            { 
+                DrawEdge(g, new Pen(Color.White, 10), edge.v1.pos, edge.v2.pos);
+                if (edge.oriented)
+                {
+                    DrawEdge(g, new Pen(Color.White, 10), edge.ptsArrow[0], edge.ptsArrow[1]);
+                    DrawEdge(g, new Pen(Color.White, 10), edge.ptsArrow[0], edge.ptsArrow[2]);
+                }
             }
         }
 
-        public void RedrawEdges()
+        public void RedrawVertices(Graphics g)
         {
-            Graphics g = splitContainer.Panel1.CreateGraphics();
-
-            foreach (Edge edge in edges) DrawEdge(g, new Pen(Color.White, 10), edge.pos1, edge.pos2);
-        }
-
-        public void RedrawVertices()
-        {
-            Graphics g = splitContainer.Panel1.CreateGraphics();
-
             foreach (Vertex vertex in vertices)
             {
-                //DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
                 DrawVertex(g, vertex.pos, new Size(30, 30));
             }
         }
@@ -195,7 +278,31 @@ namespace Graphs
             return null;
         }
 
-        public Vertex Hovered(Vertex vertex)
+        public Edge GetHoveredEdge(Point mPos)
+        {
+            float a; float b; float c; float dist; float denom; float distToMouseA; float distToMouseB;
+
+            foreach(Edge edge in edges)
+            {               
+                a = edge.v2.pos.Y - edge.v1.pos.Y;
+                b = -edge.v2.pos.X + edge.v1.pos.X;
+                c = -a * edge.v1.pos.X - b * edge.v1.pos.Y;
+
+                denom = (float)Math.Sqrt(a * a + b * b);
+                dist = Math.Abs(a * mPos.X + b * mPos.Y + c) / denom;
+                if (dist > 5) continue;
+
+                distToMouseA = EvalDistance(edge.v1.pos, mPos);
+                distToMouseB = EvalDistance(edge.v2.pos, mPos);
+
+                if (denom > distToMouseA && denom > distToMouseB)
+                    return edge;
+            }
+
+            return null;
+        }
+
+        public Vertex HoveredV(Vertex vertex)
         {
             if (vertex == hVertex) return vertex;
             Graphics g = splitContainer.Panel1.CreateGraphics();
@@ -217,6 +324,30 @@ namespace Graphs
             }
 
             return vertex;
+        }
+
+        public Edge HoveredE(Edge edge)
+        {
+            if (drag == true || edge == hEdge) return edge;
+            Graphics g = splitContainer.Panel1.CreateGraphics();
+
+            if (edge == null)
+            {
+                DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
+                // nebo PaintOver
+                if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 10), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 10), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
+            }
+            else
+            {
+                if (hEdge != null)
+                {
+                    DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
+                }
+                
+                DrawEdge(g, new Pen(Color.White, 13), edge.v1.pos, edge.v2.pos);
+            }
+
+            return edge;
         }
 
         private void dragUpdate_Tick(object sender, EventArgs e)
@@ -244,10 +375,9 @@ namespace Graphs
         private void fixedUpdate_Tick(object sender, EventArgs e)
         {
             Point mPos = splitContainer.Panel1.PointToClient(MousePosition);
-            hVertex = Hovered(GetHoveredVertex(mPos));
-
-            // nebo na jedné z edges
-            foreach (Edge edge in edges) { }
+            hVertex = HoveredV(GetHoveredVertex(mPos));
+            if (hVertex != null && hEdge == null) return;
+            hEdge = HoveredE(GetHoveredEdge(mPos));
         }
 
         private void fixedUpdate_Start(object sender, EventArgs e) { fixedUpdate.Start(); }
@@ -260,7 +390,7 @@ namespace Graphs
         public int num;
         public int radius = 15;
         public Point pos;
-         
+
         public Vertex(Point pos, int num)
         {
             this.pos = pos;
@@ -270,17 +400,15 @@ namespace Graphs
 
     public class Edge
     {
-        private int num;
-        public int v_1;
-        public int v_2;
-        public Point pos1;
-        public Point pos2;
+        public Vertex v1;
+        public Vertex v2;
+        public bool oriented = false;
+        public Point[] ptsArrow;
 
-        public Edge(int v_1, int v_2, int num)
+        public Edge(Vertex v1, Vertex v2)
         {
-            this.v_1 = v_1;
-            this.v_2 = v_2;
-            this.num = num;
+            this.v1 = v1;
+            this.v2 = v2;
         }
     }
 
