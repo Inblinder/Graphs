@@ -14,7 +14,8 @@ namespace Graphs
     {
         List<Vertex> vertices = new List<Vertex>();
         List<Edge> edges = new List<Edge>();
-        int[,] adjMatrix = new int[8, 8];
+        List<Label> weightLabels = new List<Label>();
+        int[,] adjMatrix = new int[8, 8];       
         Vertex origin; Vertex termin;
         public bool drag = false;
         Pen penPrevState;
@@ -42,7 +43,7 @@ namespace Graphs
                 if (drag)
                 {
                     termin = new Vertex(pos, vertices.Count + 1);
-                    edges.Add(new Edge(origin, termin));
+                    InitEdge(origin, termin);
                     AdjustMatrix(origin.num, termin.num, edges.Count, 1);
                     origin = termin;
                 }
@@ -53,7 +54,7 @@ namespace Graphs
                     drag = true;
                 }
 
-                vertices.Add(origin);
+                vertices.Add(origin); // tvorit vertex pouze pokud je od ostatnich alespon nejak vzdaleny
                 DrawVertex(g, pos, new Size(30, 30));
                 PrintMatrix(vertices.Count);
                 CapturePreviousState();
@@ -75,16 +76,29 @@ namespace Graphs
             }
         }
 
-        public void AdjustMatrix(int v_1, int v_2, int edge_count, int val)
+        public void AdjustMatrix(int v_1, int v_2, int edge_count, int val, bool orient = false)
         {
             int size = adjMatrix.GetLength(0);
             if (vertices.Count >= size)
             {
                 adjMatrix = new int[size * 2, size * 2];
-                for (int i = 0; i < edge_count; i++) { adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = 1; adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = 1; }
+                for (int i = 0; i < edge_count; i++)
+                {
+                    if (edges[i].oriented == true)
+                    {
+                        if (edges[i].ptsArrow[0] == edges[i].v2.pos) adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weight;
+                        else adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weight;
+                    }
+                    else
+                    {
+                        adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weight;
+                        adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weight;
+                    }
+                }
             }
             
-            adjMatrix[v_1 - 1, v_2 - 1] = val; adjMatrix[v_2 - 1, v_1 - 1] = val;
+            adjMatrix[v_1 - 1, v_2 - 1] = val;
+            if (orient == false) adjMatrix[v_2 - 1, v_1 - 1] = val;
         }
 
         public void PrintMatrix(int vertex_count)
@@ -113,6 +127,13 @@ namespace Graphs
             return m;
         }
 
+        public void InitEdge(Vertex v1, Vertex v2)
+        {
+            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos));
+            splitContainer.Panel1.Controls.Add(edge.weightLabel);
+            edges.Add(edge);
+        }
+
         public void CapturePreviousState()
         {
             TextureBrush TakeAScreenshot()
@@ -137,13 +158,21 @@ namespace Graphs
             u1 = (int)(k * u1); u2 = (int)(k * u2);
         }
 
+        public Point GetTheMiddle(Point a, Point b)
+        {
+            Point vektor = new Point((b.X - a.X) / 2, (b.Y - a.Y) / 2);
+            if (EvalDistance(new Point(a.X + vektor.X, a.Y + vektor.Y), b) < EvalDistance(a, b)) return new Point(a.X + vektor.X, a.Y + vektor.Y);
+            else return new Point(a.X - vektor.X, a.Y - vektor.Y);
+        }
+
         public void LeftClickedVertex(Vertex sender)
         {
             if (drag == true)
             {
                 foreach (Edge edge in edges)
-                    if (edge.v1 == origin && edge.v2 == sender || edge.v2 == origin && edge.v1 == sender) { return; }
-                edges.Add(new Edge(origin, sender));
+                    if (edge.v1 == origin && edge.v2 == sender || edge.v2 == origin && edge.v1 == sender) { return; } // nefunguje
+                
+                InitEdge(origin, sender);
                 AdjustMatrix(origin.num, sender.num, edges.Count, 1);
             }
             else { drag = true; }
@@ -151,11 +180,11 @@ namespace Graphs
             origin = sender;
             pos = sender.pos;
             PrintMatrix(vertices.Count());
+            PaintOver(splitContainer.Panel1.CreateGraphics()); // mozna se zamyslet jestli to tam nechat
             CapturePreviousState();
             dragUpdate.Start();
         }
 
-        // dodelat + vyresit hover (mozna vzdycky PaintOver je jistejsi) + adjustnout matici
         public void LeftClickedEdge(Edge sender, Point pos)
         {
             float fromV1 = EvalDistance(pos, sender.v1.pos);
@@ -183,27 +212,39 @@ namespace Graphs
                     if (EvalDistance(new Point(closerV.pos.X + u1, closerV.pos.Y + u2), sender.v1.pos) < lengthOfEdge) pt = new Point(closerV.pos.X + u1, closerV.pos.Y + u2);
                     else pt = new Point((closerV.pos.X - u1), (closerV.pos.Y - u2));
                 }
-                
+
                 ScaleVector(15, ref u1, ref u2);
-                sender.oriented = true;
-                sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
-                
-                //nebo PaintOver
-                DrawEdge(g, new Pen(Color.White, 10), closerV.pos, sender.ptsArrow[1]);
-                DrawEdge(g, new Pen(Color.White, 10), closerV.pos, sender.ptsArrow[2]);
+
+                if (sender.oriented == true)
+                { 
+                    sender.oriented = false;
+                    AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count, 1);
+                }
+                else
+                {                  
+                    sender.oriented = true;
+                    sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
+                    if (closerV == sender.v1) AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count, 0, true);
+                    else AdjustMatrix(sender.v2.num, sender.v1.num, edges.Count, 0, true);
+                }
+
+                PaintOver(g);
+                CapturePreviousState();
             }
             else
             {
-                
+                 //doplnit
             }
+
+            PrintMatrix(vertices.Count);
         }
 
         public void DeleteVertex(Vertex sender)
         {
             for (int i = edges.Count - 1; i >= 0; i--)
-                if (edges[i].v1 == sender || edges[i].v2 == sender) edges.RemoveAt(i);
+                if (edges[i].v1 == sender || edges[i].v2 == sender) { splitContainer.Panel1.Controls.Remove(edges[i].weightLabel); edges.RemoveAt(i); }
 
-            int removedNum = sender.num;
+                    int removedNum = sender.num;
             vertices.Remove(sender);
 
             foreach (Vertex vertex in vertices)
@@ -217,7 +258,8 @@ namespace Graphs
         public void DeleteEdge(Edge sender)
         {
             AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count - 1, 0);
-            sender.oriented = false;
+            //sender.oriented = false;
+            splitContainer.Panel1.Controls.Remove(sender.weightLabel);
             edges.Remove(sender);
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
@@ -239,8 +281,8 @@ namespace Graphs
                 DrawEdge(g, new Pen(Color.White, 10), edge.v1.pos, edge.v2.pos);
                 if (edge.oriented)
                 {
-                    DrawEdge(g, new Pen(Color.White, 10), edge.ptsArrow[0], edge.ptsArrow[1]);
-                    DrawEdge(g, new Pen(Color.White, 10), edge.ptsArrow[0], edge.ptsArrow[2]);
+                    DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[1]);
+                    DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[2]);
                 }
             }
         }
@@ -334,8 +376,8 @@ namespace Graphs
             if (edge == null)
             {
                 DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
-                // nebo PaintOver
-                if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 10), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 10), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
+                //hEdge.AdjustLabel(20, hEdge.weight);
+                if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
             }
             else
             {
@@ -343,7 +385,8 @@ namespace Graphs
                 {
                     DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
                 }
-                
+
+                //edge.AdjustLabel(30, edge.weight);
                 DrawEdge(g, new Pen(Color.White, 13), edge.v1.pos, edge.v2.pos);
             }
 
@@ -404,11 +447,26 @@ namespace Graphs
         public Vertex v2;
         public bool oriented = false;
         public Point[] ptsArrow;
+        public int weight = 1;
+        public Label weightLabel;
 
-        public Edge(Vertex v1, Vertex v2)
+        public Edge(Vertex v1, Vertex v2, Point loc)
         {
             this.v1 = v1;
             this.v2 = v2;
+
+            weightLabel = new Label();
+            weightLabel.Location = loc;
+            weightLabel.ForeColor = Color.White;
+            AdjustLabel(20, 1);
+        }
+
+        public void AdjustLabel(int scale, int w) // tuhle funkci predelat
+        {
+            weight = w;
+            weightLabel.Text = $"{w}";
+            //weightLabel.Font = new Font(SystemFonts.DefaultFont, );
+            weightLabel.Size = new Size(scale, scale);
         }
     }
 

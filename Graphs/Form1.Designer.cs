@@ -32,6 +32,9 @@ namespace Graphs
             this.components = new System.ComponentModel.Container();
             this.splitContainer = new System.Windows.Forms.SplitContainer();
             this.label2 = new System.Windows.Forms.Label();
+            this.algLabel = new System.Windows.Forms.Label();
+            this.rightBtn = new System.Windows.Forms.Button();
+            this.leftBtn = new System.Windows.Forms.Button();
             this.panelMatrix = new System.Windows.Forms.Panel();
             this.copyBtn = new System.Windows.Forms.Button();
             this.pasteBox = new System.Windows.Forms.TextBox();
@@ -68,11 +71,14 @@ namespace Graphs
             // splitContainer.Panel2
             // 
             this.splitContainer.Panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(252)))));
+            this.splitContainer.Panel2.Controls.Add(this.algLabel);
+            this.splitContainer.Panel2.Controls.Add(this.rightBtn);
+            this.splitContainer.Panel2.Controls.Add(this.leftBtn);
             this.splitContainer.Panel2.Controls.Add(this.panelMatrix);
             this.splitContainer.Panel2.Controls.Add(this.label1);
             this.splitContainer.Panel2.Cursor = System.Windows.Forms.Cursors.Arrow;
-            this.splitContainer.Size = new System.Drawing.Size(882, 503);
-            this.splitContainer.SplitterDistance = 550;
+            this.splitContainer.Size = new System.Drawing.Size(1332, 778);
+            this.splitContainer.SplitterDistance = 830;
             this.splitContainer.TabIndex = 0;
             this.splitContainer.TabStop = false;
             // 
@@ -86,6 +92,35 @@ namespace Graphs
             this.label2.TabIndex = 0;
             this.label2.Text = "click to create vertex";
             // 
+            // algLabel
+            // 
+            this.algLabel.AutoSize = true;
+            this.algLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.algLabel.Location = new System.Drawing.Point(47, 70);
+            this.algLabel.MinimumSize = new System.Drawing.Size(60, 25);
+            this.algLabel.Name = "algLabel";
+            this.algLabel.Size = new System.Drawing.Size(60, 25);
+            this.algLabel.TabIndex = 8;
+            this.algLabel.Text = "Choose";
+            // 
+            // rightBtn
+            // 
+            this.rightBtn.Location = new System.Drawing.Point(112, 70);
+            this.rightBtn.Name = "rightBtn";
+            this.rightBtn.Size = new System.Drawing.Size(25, 25);
+            this.rightBtn.TabIndex = 7;
+            this.rightBtn.Text = ">";
+            this.rightBtn.UseVisualStyleBackColor = true;
+            // 
+            // leftBtn
+            // 
+            this.leftBtn.Location = new System.Drawing.Point(18, 70);
+            this.leftBtn.Name = "leftBtn";
+            this.leftBtn.Size = new System.Drawing.Size(25, 25);
+            this.leftBtn.TabIndex = 6;
+            this.leftBtn.Text = "<";
+            this.leftBtn.UseVisualStyleBackColor = true;
+            // 
             // panelMatrix
             // 
             this.panelMatrix.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
@@ -93,7 +128,7 @@ namespace Graphs
             this.panelMatrix.Controls.Add(this.pasteBox);
             this.panelMatrix.Controls.Add(this.insertBtn);
             this.panelMatrix.Controls.Add(this.matrix);
-            this.panelMatrix.Location = new System.Drawing.Point(3, 178);
+            this.panelMatrix.Location = new System.Drawing.Point(3, 453);
             this.panelMatrix.Name = "panelMatrix";
             this.panelMatrix.Size = new System.Drawing.Size(288, 322);
             this.panelMatrix.TabIndex = 5;
@@ -162,7 +197,7 @@ namespace Graphs
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(882, 503);
+            this.ClientSize = new System.Drawing.Size(1332, 778);
             this.Controls.Add(this.splitContainer);
             this.MinimumSize = new System.Drawing.Size(900, 550);
             this.Name = "Form1";
@@ -196,6 +231,9 @@ namespace Graphs
         private System.Windows.Forms.Panel panelMatrix;
         private System.Windows.Forms.Button copyBtn;
         private System.Windows.Forms.Timer fixedUpdate;
+        private System.Windows.Forms.Label algLabel;
+        private System.Windows.Forms.Button rightBtn;
+        private System.Windows.Forms.Button leftBtn;
     }
 }
 
