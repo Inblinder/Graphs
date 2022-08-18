@@ -25,9 +25,10 @@ namespace Graphs
         Edge hEdge = null;
         Edge writingOn = null;
 
-        Algorithms AlgObj = new Algorithms(); // mozna zauvazovat o tom, jestli neudelat Constructor, kterej by rovnou nebral matici sousednosti a convertil na seznam nasled
+        Algorithms AlgObj;
         string[] algoNames = new string[9] { "DFS", "BFS", "Dijkstra", "Bridges", "Components", "SSK", "FW", "Jarnik", "Topological Sort" };
         int alg = 0;
+        const int infty = 999999;
 
 
         public Form1()
@@ -112,8 +113,16 @@ namespace Graphs
             string m = "";
             for (int i = 0; i < vertex_count; i++)
                 for (int j = 0; j < vertex_count; j++)
-                    if (j < vertex_count - 1) m += $"{matrix[i, j]}  ";
-                    else m += $"{matrix[i, j]}\n";
+                    if (j < vertex_count - 1)
+                    {
+                        if (matrix[i, j] != infty) m += $"{matrix[i, j]}  ";
+                        else m += "inf  ";
+                    }
+                    else
+                    {
+                        if (matrix[i, j] != infty) m += $"{matrix[i, j]}\n";
+                        else m += "inf\n";
+                    }
             return m;
         }
 
@@ -186,6 +195,7 @@ namespace Graphs
             origin = sender;
             pos = sender.pos;
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
+            vertexLabel.Visible = false;
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
             dragUpdate.Start();
@@ -196,7 +206,7 @@ namespace Graphs
             float fromV1 = EvalDistance(pos, sender.v1.pos);
             float fromV2 = EvalDistance(pos, sender.v2.pos);            
 
-            if (Math.Min(fromV1, fromV2) < 40)
+            if (Math.Min(fromV1, fromV2) < 50)
             {
                 Graphics g = splitContainer.Panel1.CreateGraphics();
                 Point pt; Vertex closerV;
@@ -257,6 +267,7 @@ namespace Graphs
             foreach (Vertex vertex in vertices)
                 if (vertex.num > removedNum) vertex.num -= 1;
 
+            vertexLabel.Visible = false;
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
@@ -358,6 +369,7 @@ namespace Graphs
 
             if (vertex == null)
             {
+                vertexLabel.Visible = false;
                 hVertex.radius = 15;
                 DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
             }
@@ -368,6 +380,12 @@ namespace Graphs
                     hVertex.radius = 15;
                     DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
                 }
+
+                vertexLabel.Location = new Point(vertex.pos.X - 10, vertex.pos.Y - 10);
+                vertexLabel.Text = $"{vertex.num}";
+                vertexLabel.Size = new Size((vertexLabel.Text.Length + 1) * 10, 20);
+                vertexLabel.Visible = true;
+
                 vertex.radius = 20;
                 DrawVertex(g, vertex.pos, new Size(40, 40));
             }
@@ -398,25 +416,6 @@ namespace Graphs
             }
 
             return edge;
-        }
-
-        public void StopWriting() // nemůžu mít obousměrny hrany (pouze neorientované -> změnit!)
-        {
-            KeyPreview = false;
-            writeTimer.Stop();
-            writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
-
-            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = Convert.ToString(writingOn.weight); return; }
-            else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
-
-            if (writingOn.oriented == true)
-            {
-                if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
-                else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
-            }
-            else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, edges.Count, writingOn.weight);
-
-            matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
         private void dragUpdate_Tick(object sender, EventArgs e)
@@ -463,10 +462,39 @@ namespace Graphs
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
         {
             int i;
-            //if (e.KeyChar == (char)13) label1.Text = "pressed enter key";
+            if (e.KeyChar == (char)13) label1.Text = "pressed enter key"; // nefunkční
 
-            if (int.TryParse(e.KeyChar.ToString(), out i)) writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + Convert.ToString(i);
+            if (int.TryParse(e.KeyChar.ToString(), out i) || e.KeyChar == '-')
+            {
+                if (e.KeyChar == '-') { if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text == "_") writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + "-"; }
+                else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + Convert.ToString(i);
+            }
+            else if (e.KeyChar == (char)Keys.Back)
+            {
+                string s = writingOn.weightLabel.Text.Replace("_", "");
+                writingOn.weightLabel.Text = s.Remove(s.Length - 1);
+            }
             else StopWriting();
+
+            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
+        }
+        public void StopWriting() // nemůžu mít obousměrny hrany (pouze neorientované -> změnit!)
+        {
+            KeyPreview = false;
+            writeTimer.Stop();
+            writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
+
+            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = Convert.ToString(writingOn.weight); return; }
+            else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
+
+            if (writingOn.oriented == true)
+            {
+                if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
+                else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
+            }
+            else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, edges.Count, writingOn.weight);
+
+            matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
         // algs //
@@ -475,19 +503,22 @@ namespace Graphs
             switch (alg)
             {
                 case 0: // DFS
-                    algDescription.Text = "Depth - first search(DFS) is an algorithm for traversing or searching tree or graph data structures.The algorithm starts at the root node(selecting some arbitrary node as the root node in the case of a graph) and explores as far as possible along each branch before backtracking.";
+                    algDescription.Text = "Depth - first search(DFS) is an algorithm for traversing or searching tree or graph data structures.The algorithm starts at the source node and explores as far as possible along each branch before backtracking.";
                     labelSource.Show();
+                    comboVertices.Show();
                     break;
                 case 1: // BFS
-                    algDescription.Text = "Breadth-first search (BFS) is an algorithm for searching a tree data structure for a node that satisfies a given property. It starts at the tree root and explores all nodes at the present depth prior to moving on to the nodes at the next depth level.";
+                    algDescription.Text = "Breadth-first search (BFS) is an algorithm for searching a tree data structure for a node that satisfies a given property. It starts at the source node and explores all nodes at the present depth prior to moving on to the nodes at the next depth level.";
                     break;
                 case 2: // Dijkstra
                     algDescription.Text = "Given a graph and a source vertex in the graph, find the shortest paths from the source to all vertices in the given graph.";
                     labelSource.Show();
+                    comboVertices.Show();
                     break;
                 case 3: // Bridges
                     algDescription.Text = "An edge in an undirected connected graph is a bridge if removing it disconnects the graph. For a disconnected undirected graph, definition is similar, a bridge is an edge removing which increases number of disconnected components.";
                     labelSource.Hide();
+                    comboVertices.Hide();
                     break;
                 case 4: // Komponenty
                     algDescription.Text = "A component of an undirected graph is a connected subgraph that is not part of any larger connected subgraph.";
@@ -506,8 +537,12 @@ namespace Graphs
                 case 8: // Topological Sort
                     algDescription.Text = "Topological sorting for Directed Acyclic Graph (DAG) is a linear ordering of vertices such that for every directed edge u v, vertex u comes before v in the ordering.";
                     labelSource.Hide();
+                    comboVertices.Hide();
                     break;
             }
+
+            resultLabel.Text = "";
+            resultMatrix.Text = "[...]";
         }
         private void rightBtn_Click(object sender, EventArgs e)
         {
@@ -524,34 +559,42 @@ namespace Graphs
         }
         private void startBtn_Click(object sender, EventArgs e)
         {
+            if (vertices.Count == 0) return;
+            AlgObj = new Algorithms(adjMatrix, vertices.Count);
+
             switch (alg)
             {
                 case 0: // DFS
-                    AlgObj.DFS();
+                    resultLabel.Text = "[ " + AlgObj.soloDFS(0) + "]";
                     break;
                 case 1: // BFS
-                    AlgObj.BFS();
+                    resultLabel.Text = "[ " + AlgObj.BFS(0) + "]";
                     break;
                 case 2: // Dijkstra
-                    AlgObj.Dijkstra(adjMatrix, 1);
+                    Tuple<int[], int[]> resTuple = AlgObj.Dijkstra(0);
+                    if (resTuple.Item1[0] == -1)
+                        resultLabel.Text = "Contains negative edges!";
+                    else
+                        resultLabel.Text = "DistArr: [ " + string.Join(", ", resTuple.Item1) + " ]";
+                        resultMatrix.Text = "PrevArr: [ " + string.Join(", ", resTuple.Item2) + " ]";
                     break;
                 case 3: // Bridges
-                    AlgObj.Bridges();
+                    resultLabel.Text = string.Join("\n", AlgObj.Bridges());
                     break;
                 case 4: // Komponenty
-                    AlgObj.Components();
+                    resultMatrix.Text = AlgObj.Components();
                     break;
                 case 5: // SSK
-                    AlgObj.SSK();
+                   resultLabel.Text =  "[ " + string.Join(", ", AlgObj.SSK()) + " ]";
                     break;
                 case 6: // FW
-                    resultMatrix.Text = PrintMatrix(vertices.Count, AlgObj.FW(adjMatrix)); // poresit jak vyhandlovat nekonečna
+                    resultMatrix.Text = PrintMatrix(vertices.Count, AlgObj.FW());
                     break;
                 case 7: // Jarnik
-                    AlgObj.Jarnik();
+                    resultMatrix.Text = PrintMatrix(vertices.Count, AlgObj.Jarnik());
                     break;
                 case 8: // Topological Sort
-                    AlgObj.TopologicalSort();
+                    resultLabel.Text = "[ " + AlgObj.TopologicalSort() + " ]";
                     break;
 
             // checknout správnosti algoritmů
@@ -597,6 +640,12 @@ namespace Graphs
     public class Heap
     {
         public List<(int, int)> heap = new List<(int, int)>{ (0, 0) };
+        public int[] pos;
+
+        public Heap(int maxKey)
+        {
+            pos = new int[maxKey + 1];
+        }
 
         public void Insert((int, int) element)
         {
@@ -609,6 +658,8 @@ namespace Graphs
         {
             while (j > 1 && heap[j].Item2 < heap[j / 2].Item2)
             {
+                pos[heap[j].Item1] = j / 2; pos[heap[j / 2].Item1] = j;
+
                 (int, int) temp = heap[j];
                 heap[j] = heap[j / 2]; heap[j / 2] = temp;
                 j = j / 2;
@@ -619,7 +670,7 @@ namespace Graphs
         {
             if (heap.Count == 1) return -1;
 
-            int zrus = heap[1].Item1;
+            int min = heap[1].Item1; pos[min] = 0;
             heap[1] = heap[heap.Count - 1];
             heap.RemoveAt(heap.Count - 1);
 
@@ -627,55 +678,69 @@ namespace Graphs
             while (2 * j < heap.Count)
             {
                 int n = 2 * j;
-                if (n < heap.Count - 1) {
+                if (n < heap.Count - 1)
+                {
                     if (heap[n + 1].Item2 < heap[n].Item2) n += 1;
 
                     if (heap[j].Item2 > heap[n].Item2)
                     {
+                        pos[heap[j].Item1] = n; pos[heap[n].Item1] = j;
+
                         (int, int) temp = heap[j];
                         heap[j] = heap[n]; heap[n] = temp;
                         j = n;
                     }
                     else break;
                 }
+                else break;
             }
 
-            return zrus;
+            return min;
         }
 
         public void DecreaseKey(int key, int value)
         {
-            int index = -1;
+            int index = pos[key];
+            if (index == 0) return;
 
-            for (int i = 0; i < heap.Count; i++) // nejak chytřeji - tohle by srazilo na O(n)
-            {
-                if (heap[i].Item1 == key) { index = i; break; }
-            }
-
-            if (index == -1) return;
             heap[index] = (key, value);
-
             BubbleUp(index);
+        }
+
+        public bool Empty()
+        {
+            if (heap.Count > 1) return false;
+            else return true;
         }
     }
 
-    public class Algorithms
+    public class Algorithms // check pro orientované a neorientované alg
     {
+        int[,] adjM;
+        int[][] nasled;
+        int n;
+        bool containsNegativeEdges;
         const int infty = 999999;
 
-        public bool relax(int u, int v, int[,] weight, ref int[] dist, ref int[] prev)
+        public Algorithms(int[,] adjMatrix, int numVertices)
         {
-            if (dist[u] + weight[u, v] < dist[v])
-            {
-                dist[v] = dist[u] + weight[u, v];
-                prev[v] = u;
-                return true;
-            }
-
-            return false;
+            adjM = GetMatrix(adjMatrix, numVertices);
+            nasled = seznamNasledniku(adjM);
+            n = adjM.GetLength(0);
         }
 
-        public int[][] seznamNasledniku(int[,] adjMatrix)
+        int[,] GetMatrix(int[,] adjMatrix, int numVertices)
+        {
+            int[,] matrix = new int[numVertices, numVertices];
+
+            for (int i = 0; i < numVertices; i++)
+            {
+                for (int j = 0; j < numVertices; j++) matrix[i, j] = adjMatrix[i, j];
+            }
+            return matrix;
+        }
+
+        int[][] seznamNasledniku(int[,] adjMatrix)
         {
             int size = adjMatrix.GetLength(0);
             int[][] jag = new int[size][];
@@ -687,7 +752,8 @@ namespace Graphs
 
                 for (int j = 0; j < size; j++)
                 {
-                    if (adjMatrix[i, j] != 0) temp.Add(adjMatrix[i, j]);
+                    if (adjMatrix[i, j] != 0) temp.Add(j);
+                    if (adjMatrix[i, j] < 0) containsNegativeEdges = true;
                 }
 
                 jag[i] = new int[temp.Count];
@@ -701,60 +767,249 @@ namespace Graphs
             return jag;
         }
 
-        public void DFS() { }
-
-        public void BFS() { }
-
-        public Tuple<int[], int[]> Dijkstra (int[,] adjMatrix, int source)
+        bool relax(int u, int v, ref int[] dist, ref int[] prev)
         {
-            int[][] naslednici = seznamNasledniku(adjMatrix);
-            int[] dist = new int[adjMatrix.GetLength(0)];
-            int[] prev = new int[adjMatrix.GetLength(0)];
-            Heap Q = new Heap();
+            if (dist[u] + adjM[u, v] < dist[v])
+            {
+                dist[v] = dist[u] + adjM[u, v];
+                prev[v] = u;
+                return true;
+            }
 
-            for (int v = 0; v < adjMatrix.GetLength(0); v++)
+            return false;
+        }
+
+        Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>> DFS()
+        {
+            int c = 0; int order = 0;
+            int[] opened = new int[n];
+            int[] pred = new int[n];
+            int[] low = new int[n]; Array.Fill(low, infty);
+            List<int> ends = new List<int>();
+            string stromy = "";
+
+            int[] p = new int[n]; int[] k = new int[n]; // casy otevreni a zavreni
+
+            List<(int, int)> zpet = new List<(int, int)>();
+            List<(int, int)> bridges = new List<(int, int)>();
+
+            void Visit(int u, ref int order, ref string stromy)
+            {
+                opened[u] = 1; order += 1; p[u] = order;
+
+                foreach (int neigh in nasled[u])
+                {
+                    if (opened[neigh] == 0) // stromová
+                    {
+                        pred[neigh] = u;
+                        stromy += $", {neigh + 1}";
+                        Visit(neigh, ref order, ref stromy);
+
+                        if (low[neigh] >= p[neigh]) bridges.Add((u + 1, neigh + 1));
+
+                        low[u] = Math.Min(low[u], low[neigh]);
+                    }
+                    else
+                    {
+                        low[u] = Math.Min(low[u], low[neigh]);
+
+                        if (opened[neigh] == 1)
+                        {                           
+                            zpet.Add((u, neigh)); // zpětná
+                        }
+                        else
+                        {
+                            if (p[u] < p[neigh]) { } // dopředná
+                            else { } // příčná
+                        }
+                    }
+                }
+
+                ends.Add(u);
+                opened[u] = -1; order += 1; k[u] = order;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (opened[i] == 0)
+                {
+                    c += 1;
+                    stromy += $"\nstrom_{c}: {i + 1}";
+                    Visit(i, ref order, ref stromy);
+                }
+            }
+
+            return new Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>>(stromy, p, k, ends, zpet, bridges);
+        }
+
+        public string soloDFS(int source)
+        {
+            string order = ""; int last = 0;
+            int[] stack = new int[(n * (n - 1)) / 2]; // přesněji ((n - 1)*(n - 2) / 2) + 1
+            bool[] seen = new bool[n];
+            stack[0] = source;
+
+            while (last != -1)
+            {
+                int vertex = stack[last]; last -= 1;
+                if (seen[vertex] == false) order += $"{vertex + 1} ";
+                seen[vertex] = true;
+
+                foreach (int neigh in nasled[vertex])
+                {
+                    if (seen[neigh] == false)
+                    {
+                        last += 1;
+                        stack[last] = neigh;
+                    }
+                }
+            }
+
+            return order;
+        }
+
+        public string BFS(int source)
+        {
+            string order = ""; int first = 0; int last = 0;
+            int[] queue = new int[(n * (n - 1)) / 2];
+            bool[] seen = new bool[n];
+            queue[0] = source;
+
+            while (first <= last)
+            {
+                int vertex = queue[first % queue.Length];
+                first += 1;
+                if (seen[vertex] == false) order += $"{vertex + 1} ";
+                seen[vertex] = true;              
+
+                foreach (int neigh in nasled[vertex])
+                {
+                    if (seen[neigh] == false)
+                    {
+                        last += 1;
+                        queue[last % queue.Length] = neigh;
+                    } 
+                }
+            }
+
+            return order;
+        }
+
+        public Tuple<int[], int[]> Dijkstra (int source)
+        {
+            if (containsNegativeEdges) return new Tuple<int[], int[]>(new int[] { -1 }, new int[] { -1 });
+            int[] dist = new int[n];
+            int[] prev = new int[n]; prev[source] = -1;
+            Heap Q = new Heap(n - 1);
+
+            for (int v = 0; v < n; v++)
             {
                 if (v != source) dist[v] = infty;
                 Q.Insert((v, dist[v]));
             }
                 
-            while (Q.heap.Count != 1)
+            while (Q.Empty() == false)
             {
                 int u = Q.ExtractMin();
-                foreach (int neigh in naslednici[u])
+
+                foreach (int neigh in nasled[u])
                 {
-                    if (relax(u, neigh, adjMatrix, ref dist, ref prev)) Q.DecreaseKey(neigh, dist[neigh]);
+                    if (relax(u, neigh, ref dist, ref prev)) Q.DecreaseKey(neigh, dist[neigh]);
                 }
             }
 
             return new Tuple<int[], int[]>(dist, prev);
-        } // nemuzu zapor hrany
+        }
 
-        public void Bridges() { }
-
-        public void Components() { }
-
-        public void SSK() { }
-
-        public int[,] FW (int[,] adjMatrix)
+        public List<(int, int)> Bridges()
         {
-            int size = adjMatrix.GetLength(0);
-            int[,] D = new int[size, size];
+            return DFS().Item6;
+        }
 
-            for (int i = 0; i < size; i++)
+        public string Components()
+        {
+            return DFS().Item1;
+        }
+
+        public int[] SSK()
+        {
+            int[][] transpose(int[][] graph)
             {
-                for (int j = 0; j < size; j++)
+                int[][] Gt = new int[n][];
+                List<List<int>> temp = new List<List<int>>();
+                for (int i = 0; i < n; i++) temp.Add(new List<int>());
+
+                for (int i = 0; i < n; i++)
                 {
-                    if (adjMatrix[i, j] == 0 && i != j) D[i, j] = infty;
-                    else D[i, j] = adjMatrix[i, j];
+                    foreach (int vertex in graph[i]) temp[vertex].Add(i);
+                }
+
+                for (int k = 0; k < n; k++)
+                {
+                    Gt[k] = new int[temp[k].Count];
+
+                    for (int j = 0; j < temp[k].Count; j++)
+                    {
+                        Gt[k][j] = temp[k][j];
+                    }
+                }
+
+                return Gt;
+            }
+
+            List<int> ends = DFS().Item4;
+            int[][] Gt = transpose(nasled); int c = 0;
+            bool[] seen = new bool[n];
+            List<int> stack = new List<int>();
+            int[] sc_components = new int[n];
+
+            for (int i = Gt.GetLength(0) - 1; i >= 0; i--)
+            {
+                if (seen[ends[i]]) continue;
+
+                seen[ends[i]] = true;
+                c += 1;
+                stack.Add(ends[i]);
+
+                while (stack.Count > 0)
+                {
+                    int u = stack[stack.Count - 1];
+                    stack.RemoveAt(stack.Count - 1);
+                    seen[u] = true; // tady seen?
+
+                    foreach (int neigh in Gt[u])
+                    {
+                        if (seen[neigh] == false)
+                        {
+                            stack.Add(neigh);
+                            //seen[neigh] = true;
+                            sc_components[neigh] = c;
+                        }
+                    }
                 }
             }
 
-            for (int k = 0; k < size; k++)
+            return sc_components;
+        }
+
+        public int[,] FW ()
+        {
+            int[,] D = new int[n, n];
+
+            for (int i = 0; i < n; i++)
             {
-                for (int i = 0; i < size; i++)
+                for (int j = 0; j < n; j++)
                 {
-                    for (int j = 0; j < size; j++)
+                    if (adjM[i, j] == 0 && i != j) D[i, j] = infty;
+                    else D[i, j] = adjM[i, j];
+                }
+            }
+
+            for (int k = 0; k < n; k++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < n; j++)
                     {
                         if (D[i, k] + D[k, j] < D[i, j])
                         {
@@ -767,8 +1022,71 @@ namespace Graphs
             return D;
         }
 
-        public void Jarnik() { }
+        public int[,] Jarnik()
+        {
+            int[,] spanningTree = new int[n, n];
+            bool[] used = new bool[n];
+            int[] key = new int[n];
+            Heap Q = new Heap(n - 1);
 
-        public void TopologicalSort() { }
+            for (int i = 0; i < n; i++)
+            {
+                key[i] = infty;
+                Q.Insert((i, key[i]));
+            }
+
+            key[0] = 0;
+            Q.DecreaseKey(0, 0);
+
+            while (Q.Empty() == false)
+            {
+                int u = Q.ExtractMin();
+
+                foreach (int neigh in nasled[u])
+                {
+                    if (Q.pos[neigh] != 0 && adjM[u, neigh] < key[neigh])
+                    {
+                        key[neigh] = adjM[u, neigh];
+                        spanningTree[u, neigh] = adjM[u, neigh]; spanningTree[neigh, u] = adjM[u, neigh];
+                        Q.DecreaseKey(neigh, key[neigh]);
+                    }
+                }
+            }
+
+            return spanningTree;
+        }
+
+        public string TopologicalSort()
+        {
+            void topoRecursion(int vertex, bool[] seen, List<int> reversed)
+            {
+                seen[vertex] = true;
+
+                foreach (int neigh in nasled[vertex])
+                {
+                    if (seen[neigh] == false) topoRecursion(neigh, seen, reversed);
+                }
+
+                reversed.Add(vertex + 1);
+            }
+
+            if (DFS().Item5.Count > 0) return "Contains a cycle!";
+
+            string output = "";
+            bool[] seen = new bool[n];
+            List<int> reversed = new List<int>();
+
+            for (int i = 0; i < n; i++)
+            {
+                if (seen[i] == false) topoRecursion(i, seen, reversed);
+            }
+
+            for (int k = reversed.Count - 1; k >= 0; k--)
+            {
+                output += $"{reversed[k]} ";
+            }
+
+            return output;
+        }
     }
 }

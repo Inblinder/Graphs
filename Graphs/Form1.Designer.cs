@@ -32,8 +32,10 @@ namespace Graphs
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.splitContainer = new System.Windows.Forms.SplitContainer();
-            this.label2 = new System.Windows.Forms.Label();
+            this.vertexLabel = new System.Windows.Forms.Label();
+            this.basicMsg = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.comboVertices = new System.Windows.Forms.ComboBox();
             this.labelSource = new System.Windows.Forms.Label();
             this.algDescription = new System.Windows.Forms.Label();
             this.resultMsg = new System.Windows.Forms.Label();
@@ -71,7 +73,8 @@ namespace Graphs
             // splitContainer.Panel1
             // 
             this.splitContainer.Panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(28)))), ((int)(((byte)(36)))));
-            this.splitContainer.Panel1.Controls.Add(this.label2);
+            this.splitContainer.Panel1.Controls.Add(this.vertexLabel);
+            this.splitContainer.Panel1.Controls.Add(this.basicMsg);
             this.splitContainer.Panel1.Cursor = System.Windows.Forms.Cursors.Arrow;
             this.splitContainer.Panel1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Clicked);
             this.splitContainer.Panel1.MouseEnter += new System.EventHandler(this.fixedUpdate_Start);
@@ -84,24 +87,35 @@ namespace Graphs
             this.splitContainer.Panel2.Controls.Add(this.panelMatrix);
             this.splitContainer.Panel2.Controls.Add(this.label1);
             this.splitContainer.Panel2.Cursor = System.Windows.Forms.Cursors.Arrow;
-            this.splitContainer.Size = new System.Drawing.Size(1332, 778);
-            this.splitContainer.SplitterDistance = 900;
+            this.splitContainer.Size = new System.Drawing.Size(1402, 823);
+            this.splitContainer.SplitterDistance = 947;
             this.splitContainer.TabIndex = 0;
             this.splitContainer.TabStop = false;
             // 
-            // label2
+            // vertexLabel
             // 
-            this.label2.AutoSize = true;
-            this.label2.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(252)))));
-            this.label2.Location = new System.Drawing.Point(13, 13);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(145, 20);
-            this.label2.TabIndex = 0;
-            this.label2.Text = "click to create vertex";
+            this.vertexLabel.AutoSize = true;
+            this.vertexLabel.BackColor = System.Drawing.Color.White;
+            this.vertexLabel.Enabled = false;
+            this.vertexLabel.Location = new System.Drawing.Point(210, 13);
+            this.vertexLabel.Name = "vertexLabel";
+            this.vertexLabel.Size = new System.Drawing.Size(0, 20);
+            this.vertexLabel.TabIndex = 10;
+            // 
+            // basicMsg
+            // 
+            this.basicMsg.AutoSize = true;
+            this.basicMsg.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(252)))));
+            this.basicMsg.Location = new System.Drawing.Point(13, 13);
+            this.basicMsg.Name = "basicMsg";
+            this.basicMsg.Size = new System.Drawing.Size(145, 20);
+            this.basicMsg.TabIndex = 0;
+            this.basicMsg.Text = "click to create vertex";
             // 
             // panel1
             // 
             this.panel1.Anchor = System.Windows.Forms.AnchorStyles.Top;
+            this.panel1.Controls.Add(this.comboVertices);
             this.panel1.Controls.Add(this.labelSource);
             this.panel1.Controls.Add(this.algDescription);
             this.panel1.Controls.Add(this.resultMsg);
@@ -111,16 +125,24 @@ namespace Graphs
             this.panel1.Controls.Add(this.algLabel);
             this.panel1.Controls.Add(this.rightBtn);
             this.panel1.Controls.Add(this.leftBtn);
-            this.panel1.Location = new System.Drawing.Point(3, 70);
+            this.panel1.Location = new System.Drawing.Point(14, 70);
             this.panel1.MinimumSize = new System.Drawing.Size(320, 350);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(422, 350);
             this.panel1.TabIndex = 9;
             // 
+            // comboVertices
+            // 
+            this.comboVertices.FormattingEnabled = true;
+            this.comboVertices.Location = new System.Drawing.Point(116, 131);
+            this.comboVertices.Name = "comboVertices";
+            this.comboVertices.Size = new System.Drawing.Size(60, 28);
+            this.comboVertices.TabIndex = 14;
+            // 
             // labelSource
             // 
             this.labelSource.AutoSize = true;
-            this.labelSource.Location = new System.Drawing.Point(13, 119);
+            this.labelSource.Location = new System.Drawing.Point(13, 134);
             this.labelSource.Name = "labelSource";
             this.labelSource.Size = new System.Drawing.Size(97, 20);
             this.labelSource.TabIndex = 13;
@@ -129,17 +151,19 @@ namespace Graphs
             // algDescription
             // 
             this.algDescription.AutoSize = true;
-            this.algDescription.Location = new System.Drawing.Point(13, 33);
-            this.algDescription.MinimumSize = new System.Drawing.Size(400, 70);
+            this.algDescription.Font = new System.Drawing.Font("Arial", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.algDescription.Location = new System.Drawing.Point(13, 38);
+            this.algDescription.MaximumSize = new System.Drawing.Size(400, 80);
+            this.algDescription.MinimumSize = new System.Drawing.Size(400, 80);
             this.algDescription.Name = "algDescription";
-            this.algDescription.Size = new System.Drawing.Size(1832, 70);
+            this.algDescription.Size = new System.Drawing.Size(400, 80);
             this.algDescription.TabIndex = 12;
             this.algDescription.Text = resources.GetString("algDescription.Text");
             // 
             // resultMsg
             // 
             this.resultMsg.AutoSize = true;
-            this.resultMsg.Location = new System.Drawing.Point(205, 119);
+            this.resultMsg.Location = new System.Drawing.Point(13, 163);
             this.resultMsg.Name = "resultMsg";
             this.resultMsg.Size = new System.Drawing.Size(58, 20);
             this.resultMsg.TabIndex = 11;
@@ -148,15 +172,15 @@ namespace Graphs
             // resultLabel
             // 
             this.resultLabel.AutoSize = true;
-            this.resultLabel.Location = new System.Drawing.Point(286, 119);
+            this.resultLabel.Location = new System.Drawing.Point(80, 188);
+            this.resultLabel.MaximumSize = new System.Drawing.Size(100, 100);
             this.resultLabel.Name = "resultLabel";
-            this.resultLabel.Size = new System.Drawing.Size(127, 20);
+            this.resultLabel.Size = new System.Drawing.Size(0, 20);
             this.resultLabel.TabIndex = 10;
-            this.resultLabel.Text = "[------------------]";
             // 
             // startBtn
             // 
-            this.startBtn.Location = new System.Drawing.Point(15, 143);
+            this.startBtn.Location = new System.Drawing.Point(354, 130);
             this.startBtn.Name = "startBtn";
             this.startBtn.Size = new System.Drawing.Size(59, 29);
             this.startBtn.TabIndex = 9;
@@ -168,10 +192,11 @@ namespace Graphs
             // 
             this.resultMatrix.AutoSize = true;
             this.resultMatrix.Font = new System.Drawing.Font("Segoe UI", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.resultMatrix.Location = new System.Drawing.Point(215, 143);
-            this.resultMatrix.MinimumSize = new System.Drawing.Size(200, 200);
+            this.resultMatrix.Location = new System.Drawing.Point(243, 167);
+            this.resultMatrix.MaximumSize = new System.Drawing.Size(170, 170);
+            this.resultMatrix.MinimumSize = new System.Drawing.Size(170, 170);
             this.resultMatrix.Name = "resultMatrix";
-            this.resultMatrix.Size = new System.Drawing.Size(200, 200);
+            this.resultMatrix.Size = new System.Drawing.Size(170, 170);
             this.resultMatrix.TabIndex = 8;
             this.resultMatrix.Text = "[...]";
             // 
@@ -214,7 +239,7 @@ namespace Graphs
             this.panelMatrix.Controls.Add(this.pasteBox);
             this.panelMatrix.Controls.Add(this.insertBtn);
             this.panelMatrix.Controls.Add(this.matrix);
-            this.panelMatrix.Location = new System.Drawing.Point(3, 425);
+            this.panelMatrix.Location = new System.Drawing.Point(3, 470);
             this.panelMatrix.MinimumSize = new System.Drawing.Size(422, 350);
             this.panelMatrix.Name = "panelMatrix";
             this.panelMatrix.Size = new System.Drawing.Size(422, 350);
@@ -289,7 +314,7 @@ namespace Graphs
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(1332, 778);
+            this.ClientSize = new System.Drawing.Size(1402, 823);
             this.Controls.Add(this.splitContainer);
             this.MinimumSize = new System.Drawing.Size(1350, 825);
             this.Name = "Form1";
@@ -318,7 +343,7 @@ namespace Graphs
 
         private System.Windows.Forms.SplitContainer splitContainer;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label basicMsg;
         private System.Windows.Forms.Label matrix;
         private System.Windows.Forms.Timer dragUpdate;
         private System.Windows.Forms.TextBox pasteBox;
@@ -337,6 +362,8 @@ namespace Graphs
         private System.Windows.Forms.Button startBtn;
         private System.Windows.Forms.Label algDescription;
         private System.Windows.Forms.Label labelSource;
+        private System.Windows.Forms.Label vertexLabel;
+        private System.Windows.Forms.ComboBox comboVertices;
     }
 }
 
