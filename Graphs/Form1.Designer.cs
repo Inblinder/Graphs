@@ -46,7 +46,9 @@ namespace Graphs
             this.rightBtn = new System.Windows.Forms.Button();
             this.leftBtn = new System.Windows.Forms.Button();
             this.panelMatrix = new System.Windows.Forms.Panel();
+            this.exampleMsg = new System.Windows.Forms.Label();
             this.errorMsg = new System.Windows.Forms.Label();
+            this.exampleBtn = new System.Windows.Forms.Button();
             this.copyBtn = new System.Windows.Forms.Button();
             this.pasteBox = new System.Windows.Forms.TextBox();
             this.insertBtn = new System.Windows.Forms.Button();
@@ -220,8 +222,8 @@ namespace Graphs
             this.rightBtn.Name = "rightBtn";
             this.rightBtn.Size = new System.Drawing.Size(25, 25);
             this.rightBtn.TabIndex = 1;
-            this.rightBtn.Text = ">";
-            this.rightBtn.UseVisualStyleBackColor = true;
+            this.rightBtn.Text = "▶";
+            this.rightBtn.UseVisualStyleBackColor = false;
             this.rightBtn.Click += new System.EventHandler(this.rightBtn_Click);
             // 
             // leftBtn
@@ -230,14 +232,16 @@ namespace Graphs
             this.leftBtn.Name = "leftBtn";
             this.leftBtn.Size = new System.Drawing.Size(25, 25);
             this.leftBtn.TabIndex = 2;
-            this.leftBtn.Text = "<";
-            this.leftBtn.UseVisualStyleBackColor = true;
+            this.leftBtn.Text = "◀";
+            this.leftBtn.UseVisualStyleBackColor = false;
             this.leftBtn.Click += new System.EventHandler(this.leftBtn_Click);
             // 
             // panelMatrix
             // 
             this.panelMatrix.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.panelMatrix.Controls.Add(this.exampleMsg);
             this.panelMatrix.Controls.Add(this.errorMsg);
+            this.panelMatrix.Controls.Add(this.exampleBtn);
             this.panelMatrix.Controls.Add(this.copyBtn);
             this.panelMatrix.Controls.Add(this.pasteBox);
             this.panelMatrix.Controls.Add(this.insertBtn);
@@ -248,6 +252,17 @@ namespace Graphs
             this.panelMatrix.Size = new System.Drawing.Size(422, 350);
             this.panelMatrix.TabIndex = 5;
             // 
+            // exampleMsg
+            // 
+            this.exampleMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.exampleMsg.AutoSize = true;
+            this.exampleMsg.Font = new System.Drawing.Font("Segoe UI", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.exampleMsg.Location = new System.Drawing.Point(364, 281);
+            this.exampleMsg.Name = "exampleMsg";
+            this.exampleMsg.Size = new System.Drawing.Size(52, 30);
+            this.exampleMsg.TabIndex = 15;
+            this.exampleMsg.Text = " Import\r\nexample";
+            // 
             // errorMsg
             // 
             this.errorMsg.AutoSize = true;
@@ -256,6 +271,16 @@ namespace Graphs
             this.errorMsg.Name = "errorMsg";
             this.errorMsg.Size = new System.Drawing.Size(0, 20);
             this.errorMsg.TabIndex = 8;
+            // 
+            // exampleBtn
+            // 
+            this.exampleBtn.Location = new System.Drawing.Point(375, 314);
+            this.exampleBtn.Name = "exampleBtn";
+            this.exampleBtn.Size = new System.Drawing.Size(30, 27);
+            this.exampleBtn.TabIndex = 9;
+            this.exampleBtn.Text = "🡳";
+            this.exampleBtn.UseVisualStyleBackColor = true;
+            this.exampleBtn.Click += new System.EventHandler(this.exampleBtn_Click);
             // 
             // copyBtn
             // 
@@ -378,6 +403,8 @@ namespace Graphs
         private System.Windows.Forms.Label vertexLabel;
         private System.Windows.Forms.ComboBox comboVertices;
         private System.Windows.Forms.Label errorMsg;
+        private System.Windows.Forms.Label exampleMsg;
+        private System.Windows.Forms.Button exampleBtn;
     }
 }
 

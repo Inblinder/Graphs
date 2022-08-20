@@ -126,12 +126,12 @@ namespace Graphs
                 for (int j = 0; j < vertex_count; j++)
                     if (j < vertex_count - 1)
                     {
-                        if (matrix[i, j] != infty) m += $"{matrix[i, j]}  ";
+                        if (matrix[i, j] < infty - 10) m += $"{matrix[i, j]}  ";
                         else m += "inf  ";
                     }
                     else
                     {
-                        if (matrix[i, j] != infty) m += $"{matrix[i, j]}\n";
+                        if (matrix[i, j] < infty - 10) m += $"{matrix[i, j]}\n";
                         else m += "inf\n";
                     }
             return m;
@@ -222,7 +222,7 @@ namespace Graphs
                             numbers.Add(readNumber(ref index));
                         break;
                     default:
-                        error(":\nelements");
+                        error("elements");
                         return;
                 }
             }
@@ -477,7 +477,6 @@ namespace Graphs
             if (edge == null)
             {
                 DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
-                //hEdge.weightLabel.Size = new Size();
                 if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
             }
             else
@@ -487,7 +486,6 @@ namespace Graphs
                     DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
                 }
 
-                //edge.weightLabel.Size = new Size();
                 DrawEdge(g, new Pen(Color.White, 13), edge.v1.pos, edge.v2.pos);
             }
 
@@ -532,31 +530,6 @@ namespace Graphs
         private void insertBtn_Click(object sender, EventArgs e) { if (drag == false) InsertMatrix(pasteBox.Text); }
 
         /************* METHODS FOR WEIGHTS **************/
-        private void writeTimer_Tick(object sender, EventArgs e)
-        {
-            int lastIndex = writingOn.weightLabel.Text.Length - 1;
-            if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text[lastIndex] != '_') writingOn.weightLabel.Text += "_";
-            else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
-        }
-        private void Form1_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            int i;
-            if (e.KeyChar == (char)13) label1.Text = "pressed enter key"; // nefunkční
-
-            if (int.TryParse(e.KeyChar.ToString(), out i) || e.KeyChar == '-')
-            {
-                if (e.KeyChar == '-') { if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text == "_") writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + "-"; }
-                else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + Convert.ToString(i);
-            }
-            else if (e.KeyChar == (char)Keys.Back)
-            {
-                string s = writingOn.weightLabel.Text.Replace("_", "");
-                writingOn.weightLabel.Text = s.Remove(s.Length - 1);
-            }
-            else StopWriting();
-
-            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
-        }
         public void StopWriting() // nemůžu mít obousměrny hrany (pouze neorientované -> změnit!)
         {
             KeyPreview = false;
@@ -577,6 +550,29 @@ namespace Graphs
 
             writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
+        }
+        private void writeTimer_Tick(object sender, EventArgs e)
+        {
+            int lastIndex = writingOn.weightLabel.Text.Length - 1;
+            if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text[lastIndex] != '_') writingOn.weightLabel.Text += "_";
+            else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
+        }
+        private void Form1_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            int i;
+            if (int.TryParse(e.KeyChar.ToString(), out i) || e.KeyChar == '-')
+            {
+                if (e.KeyChar == '-') { if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text == "_") writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + "-"; }
+                else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + Convert.ToString(i);
+            }
+            else if (e.KeyChar == (char)Keys.Back)
+            {
+                string s = writingOn.weightLabel.Text.Replace("_", "");
+                if (writingOn.weightLabel.Text.Length != 0) writingOn.weightLabel.Text = s.Remove(s.Length - 1);
+            }
+            else StopWriting();
+
+            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
         }
 
         /************* AUXILIARY FUNCTIONS **************/
@@ -667,12 +663,14 @@ namespace Graphs
             resultLabel.Text = "";
             resultMatrix.Text = "[...]";
         }
+
         private void rightBtn_Click(object sender, EventArgs e)
         {
             alg = (alg + 1) % 9;
             algLabel.Text = algoNames[alg];
             switchLabels();
         }
+
         private void leftBtn_Click(object sender, EventArgs e)
         {
             alg -= 1;
@@ -680,6 +678,7 @@ namespace Graphs
             algLabel.Text = algoNames[alg];
             switchLabels();
         }
+
         private void startBtn_Click(object sender, EventArgs e)
         {
             if (vertices.Count == 0) return;
@@ -727,6 +726,40 @@ namespace Graphs
                     break;
                 case 8: // Topological Sort
                     resultLabel.Text = "[ " + AlgObj.TopologicalSort() + " ]";
+                    break;
+            }
+        }
+
+        private void exampleBtn_Click(object sender, EventArgs e)
+        {
+            switch (alg)
+            {
+                case 0: // DFS
+                    InsertMatrix("[[0,1,0,0,1,0,0],[1,0,1,1,0,0,0],[0,1,0,0,0,0,0],[0,1,0,0,0,0,0],[1,0,0,0,0,1,1],[0,0,0,0,1,0,0],[0,0,0,0,1,0,0]]");
+                    break;
+                case 1: // BFS
+                    InsertMatrix("[[0,1,0,0,1,0,0],[1,0,1,1,0,0,0],[0,1,0,0,0,0,0],[0,1,0,0,0,0,0],[1,0,0,0,0,1,1],[0,0,0,0,1,0,0],[0,0,0,0,1,0,0]]");
+                    break;
+                case 2: // Dijkstra
+                    InsertMatrix("[[0,1,0,3],[0,0,7,0],[2,0,0,3],[0,2,3,0]]");
+                    break;
+                case 3: // Bridges
+                    InsertMatrix("[[0,1,1,1,0,0],[1,0,1,0,0,0],[1,1,0,0,0,0],[1,0,0,0,1,1],[0,0,0,1,0,1],[0,0,0,1,1,0]]");
+                    break;
+                case 4: // Komponenty
+                    InsertMatrix("[[0,1,1,0,0,0,0],[1,0,1,0,0,0,0],[1,1,0,0,0,0,0],[0,0,0,0,1,1,0],[0,0,0,1,0,1,0],[0,0,0,1,1,0,0],[0,0,0,0,0,0,0]]");
+                    break;
+                case 5: // SSK
+                    InsertMatrix("[[0,0,1,0],[1,0,0,1],[0,1,0,1],[0,0,0,0]]");
+                    break;
+                case 6: // FW
+                    InsertMatrix("[[0,3,0,4],[3,0,0,10],[0,2,0,0],[0,0,1,0]]");
+                    break;
+                case 7: // Jarnik
+                    InsertMatrix("[[0,1,3,0,7],[1,0,2,5,0],[3,2,0,8,7],[0,5,8,0,6],[7,0,7,6,0]]");
+                    break;
+                case 8: // Topological Sort
+                    InsertMatrix("[[0,1,1,0,0],[0,0,1,1,0],[0,0,0,1,1],[0,0,0,0,0],[0,0,0,0,0]]");
                     break;
             }
         }
