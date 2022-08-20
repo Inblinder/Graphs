@@ -46,6 +46,7 @@ namespace Graphs
             this.rightBtn = new System.Windows.Forms.Button();
             this.leftBtn = new System.Windows.Forms.Button();
             this.panelMatrix = new System.Windows.Forms.Panel();
+            this.errorMsg = new System.Windows.Forms.Label();
             this.copyBtn = new System.Windows.Forms.Button();
             this.pasteBox = new System.Windows.Forms.TextBox();
             this.insertBtn = new System.Windows.Forms.Button();
@@ -133,6 +134,7 @@ namespace Graphs
             // 
             // comboVertices
             // 
+            this.comboVertices.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboVertices.FormattingEnabled = true;
             this.comboVertices.Location = new System.Drawing.Point(116, 131);
             this.comboVertices.Name = "comboVertices";
@@ -235,6 +237,7 @@ namespace Graphs
             // panelMatrix
             // 
             this.panelMatrix.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.panelMatrix.Controls.Add(this.errorMsg);
             this.panelMatrix.Controls.Add(this.copyBtn);
             this.panelMatrix.Controls.Add(this.pasteBox);
             this.panelMatrix.Controls.Add(this.insertBtn);
@@ -244,6 +247,15 @@ namespace Graphs
             this.panelMatrix.Name = "panelMatrix";
             this.panelMatrix.Size = new System.Drawing.Size(422, 350);
             this.panelMatrix.TabIndex = 5;
+            // 
+            // errorMsg
+            // 
+            this.errorMsg.AutoSize = true;
+            this.errorMsg.Location = new System.Drawing.Point(347, 6);
+            this.errorMsg.MaximumSize = new System.Drawing.Size(80, 60);
+            this.errorMsg.Name = "errorMsg";
+            this.errorMsg.Size = new System.Drawing.Size(0, 20);
+            this.errorMsg.TabIndex = 8;
             // 
             // copyBtn
             // 
@@ -272,6 +284,7 @@ namespace Graphs
             this.insertBtn.TabIndex = 4;
             this.insertBtn.Text = "Insert";
             this.insertBtn.UseVisualStyleBackColor = true;
+            this.insertBtn.Click += new System.EventHandler(this.insertBtn_Click);
             // 
             // matrix
             // 
@@ -364,6 +377,7 @@ namespace Graphs
         private System.Windows.Forms.Label labelSource;
         private System.Windows.Forms.Label vertexLabel;
         private System.Windows.Forms.ComboBox comboVertices;
+        private System.Windows.Forms.Label errorMsg;
     }
 }
 

@@ -17,25 +17,21 @@ namespace Graphs
         int[,] adjMatrix = new int[8, 8];
         Vertex origin; Vertex termin;
         public bool drag = false;
-        Pen penPrevState;
-        TextureBrush prevState;
-        Point prevMousePos;
-        Point pos;
-        Vertex hVertex = null;
-        Edge hEdge = null;
+        Pen penPrevState; TextureBrush prevState;
+        Point prevMousePos; Point pos;
+        Vertex hVertex = null; Edge hEdge = null;
         Edge writingOn = null;
 
         Algorithms AlgObj;
         string[] algoNames = new string[9] { "DFS", "BFS", "Dijkstra", "Bridges", "Components", "SSK", "FW", "Jarnik", "Topological Sort" };
-        int alg = 0;
-        const int infty = 999999;
-
+        int alg = 0; const int infty = 999999;
 
         public Form1()
         {
             InitializeComponent();
         }
 
+        /************* DRIVING METHOD **************/
         private void Clicked(object sender, MouseEventArgs e)
         {
             Graphics g = splitContainer.Panel1.CreateGraphics();
@@ -43,26 +39,37 @@ namespace Graphs
  
             if (e.Button == MouseButtons.Left)
             {
-                pos = e.Location;
+                if (hVertex != null)
+                {
+                    if (drag)
+                        foreach (Edge edge in edges)
+                            if (edge.v1 == origin && edge.v2 == hVertex || edge.v2 == origin && edge.v1 == hVertex) return;
 
-                if (hVertex != null) { LeftClickedVertex(hVertex); return; }
+                    pos = e.Location;
+                    LeftClickedVertex(hVertex);
+                    return;
+                }
+
+                pos = e.Location;
 
                 if (drag)
                 {
                     termin = new Vertex(pos, vertices.Count + 1);
                     InitEdge(origin, termin);
-                    AdjustMatrix(origin.num, termin.num, edges.Count, 1);
+                    AdjustMatrix(origin.num, termin.num, 1);
                     origin = termin;
                 }
                 else
                 {
-                    if (hEdge != null) { LeftClickedEdge(hEdge, pos); return; }
+                    if (hEdge != null) { LeftClickedEdge(hEdge, pos); return; } // hover weights
                     origin = new Vertex(pos, vertices.Count + 1);
                     drag = true;
                 }
 
-                vertices.Add(origin); // tvorit vertex pouze pokud je od ostatnich alespon nejak vzdaleny + vyresit přetékání labelů + hover weights a auto-resizing
+                vertices.Add(origin);
+                comboVertices.Items.Add(origin.num);
                 DrawVertex(g, pos, new Size(30, 30));
+                CheckMatrixSize();
                 matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
                 CapturePreviousState();
                 dragUpdate.Start();
@@ -83,13 +90,20 @@ namespace Graphs
             }
         }
 
-        public void AdjustMatrix(int v_1, int v_2, int edge_count, int val, bool orient = false)
+        /************* ALL ABOUT MATRIX **************/
+        public void AdjustMatrix(int v_1, int v_2, int val, bool orient = false)
+        {
+            adjMatrix[v_1 - 1, v_2 - 1] = val;
+            if (orient == false) adjMatrix[v_2 - 1, v_1 - 1] = val;
+        }
+
+        public void CheckMatrixSize()
         {
             int size = adjMatrix.GetLength(0);
             if (vertices.Count >= size)
             {
                 adjMatrix = new int[size * 2, size * 2];
-                for (int i = 0; i < edge_count; i++)
+                for (int i = 0; i < edges.Count; i++)
                 {
                     if (edges[i].oriented == true)
                     {
@@ -103,9 +117,6 @@ namespace Graphs
                     }
                 }
             }
-            
-            adjMatrix[v_1 - 1, v_2 - 1] = val;
-            if (orient == false) adjMatrix[v_2 - 1, v_1 - 1] = val;
         }
 
         public string PrintMatrix(int vertex_count, int[,] matrix)
@@ -126,6 +137,100 @@ namespace Graphs
             return m;
         }
 
+        public void InsertMatrix(string strMatrix)
+        {
+            void import(int size, List<int> numbers)
+            {
+                adjMatrix = new int[size, size];
+                for (int i = edges.Count - 1; i >= 0; i--) { splitContainer.Panel1.Controls.Remove(edges[i].weightLabel); edges[i] = null;}
+                vertices = new List<Vertex>();
+                edges = new List<Edge>();
+                Random r = new Random();
+
+                for (int k = 0; k < size; k++)
+                {
+                    Point randPos = new Point(r.Next(150, splitContainer.Panel1.Width - 150), r.Next(150, splitContainer.Panel1.Height - 150));
+                    while (validDistances(randPos, 150) == false) randPos = new Point(r.Next(150, splitContainer.Panel1.Width - 150), r.Next(150, splitContainer.Panel1.Height - 150));
+                    vertices.Add(new Vertex(randPos, vertices.Count + 1));
+
+                }
+
+                for (int i = 0; i < size; i++)
+                {
+                    int j = 0;
+
+                    while (j < i)
+                    {
+                        adjMatrix[i, j] = numbers[i * size + j]; adjMatrix[j, i] = numbers[j * size + i];
+
+                        if (adjMatrix[i, j] != adjMatrix[j, i])
+                        {
+                            if (adjMatrix[j, i] == 0) { InitEdge(vertices[i], vertices[j], adjMatrix[i, j], true); }
+                            else { InitEdge(vertices[j], vertices[i], adjMatrix[j, i], true);}
+                        }
+                        else if (adjMatrix[i, j] != 0) { InitEdge(vertices[i], vertices[j], adjMatrix[i, j]); }
+                        j += 1;
+                    }
+                }
+
+                PaintOver(splitContainer.Panel1.CreateGraphics());
+                CapturePreviousState();
+                comboVertices.Items.Clear();
+                for (int i = 1; i < size + 1; i++) comboVertices.Items.Add(i);
+                matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
+            }
+
+            void error(string msg) { errorMsg.Text = "Error:\n" + msg; }
+
+            int readNumber(ref int index)
+            {
+                string num = "";
+
+                while (index < strMatrix.Length && Char.IsDigit(strMatrix[index]))
+                {
+                    num += strMatrix[index];
+                    index += 1;
+                }
+
+                if (num == "") return 0;
+                return int.Parse(num);
+            }
+
+            strMatrix = strMatrix.Replace(" ", "");
+            if (strMatrix.Length < 2) error("elements");
+            else { strMatrix = strMatrix.Remove(0, 1); strMatrix = strMatrix.Remove(strMatrix.Length - 1); }
+
+            List<int> numbers = new List<int>();
+            int count = 0; int index = 0; int rows = 0;
+
+            while (index < strMatrix.Length)
+            {
+                switch (strMatrix[index])
+                {
+                    case '[':
+                        count += 1; index += 1; 
+                        if (count > 1) { error("brackets"); return; }
+                        numbers.Add(readNumber(ref index));
+                        break;
+                    case ']':
+                        count -= 1; index += 1; rows += 1;
+                        if (count < 0) { error("brackets"); return; }
+                        break;
+                    case ',':
+                        index += 1;
+                        if (index < strMatrix.Length && strMatrix[index] != '[')
+                            numbers.Add(readNumber(ref index));
+                        break;
+                    default:
+                        error(":\nelements");
+                        return;
+                }
+            }
+
+            if (count != 0 || index == 0 || rows * rows != numbers.Count) error("elements");
+            else { import(rows, numbers); }
+        }
+
         public string MatrixToString(int vertex_count)
         {
             string m = "[";
@@ -142,69 +247,37 @@ namespace Graphs
             return m;
         }
 
-        public void InitEdge(Vertex v1, Vertex v2)
+        /************* GRAPH CONTROLS **************/
+        public void InitEdge(Vertex v1, Vertex v2, int weight = 1, bool oriented = false)
         {
-            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos));
+            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos), weight);
             splitContainer.Panel1.Controls.Add(edge.weightLabel);
             edges.Add(edge);
-        }
-
-        public void CapturePreviousState()
-        {
-            TextureBrush TakeAScreenshot()
-            {
-                Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
-                Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
-                return new TextureBrush(bmpPrevState);
-            }
-
-            prevState = TakeAScreenshot();
-            penPrevState = new Pen(prevState, 15);
-        }      
-
-        public float EvalDistance(Point a, Point b)
-        {
-            return (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
-        }
-
-        public void ScaleVector(int mag, ref int u1, ref int u2)
-        {
-            float k = (float)Math.Sqrt(mag*mag / ((float)u1*u1 + (float)u2*u2));
-            u1 = (int)(k * u1); u2 = (int)(k * u2);
-        }
-
-        public Point GetTheMiddle(Point a, Point b)
-        {
-            Point vektor = new Point((b.X - a.X) / 2, (b.Y - a.Y) / 2);
-            if (EvalDistance(new Point(a.X + vektor.X, a.Y + vektor.Y), b) < EvalDistance(a, b)) return new Point(a.X + vektor.X, a.Y + vektor.Y);
-            else return new Point(a.X - vektor.X, a.Y - vektor.Y);
+            if (oriented == true) LeftClickedEdge(edge, v2.pos);
         }
 
         public void LeftClickedVertex(Vertex sender)
         {
             if (drag == true)
-            {
-                foreach (Edge edge in edges)
-                    if (edge.v1 == origin && edge.v2 == sender || edge.v2 == origin && edge.v1 == sender) { return; } // nefunguje
-                
+            { 
                 InitEdge(origin, sender);
-                AdjustMatrix(origin.num, sender.num, edges.Count, 1);
+                AdjustMatrix(origin.num, sender.num, 1);
             }
             else { drag = true; }
 
             origin = sender;
             pos = sender.pos;
-            matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
             vertexLabel.Visible = false;
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
+            matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
             dragUpdate.Start();
         }
 
         public void LeftClickedEdge(Edge sender, Point pos)
         {
             float fromV1 = EvalDistance(pos, sender.v1.pos);
-            float fromV2 = EvalDistance(pos, sender.v2.pos);            
+            float fromV2 = EvalDistance(pos, sender.v2.pos);
 
             if (Math.Min(fromV1, fromV2) < 50)
             {
@@ -233,14 +306,14 @@ namespace Graphs
                 if (sender.oriented == true)
                 { 
                     sender.oriented = false;
-                    AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count, 1);
+                    AdjustMatrix(sender.v1.num, sender.v2.num, 1);
                 }
                 else
                 {                  
                     sender.oriented = true;
                     sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
-                    if (closerV == sender.v1) AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count, 0, true);
-                    else AdjustMatrix(sender.v2.num, sender.v1.num, edges.Count, 0, true);
+                    if (closerV == sender.v1) AdjustMatrix(sender.v1.num, sender.v2.num, 0, true);
+                    else AdjustMatrix(sender.v2.num, sender.v1.num, 0, true);
                 }
 
                 PaintOver(g);
@@ -267,6 +340,7 @@ namespace Graphs
             foreach (Vertex vertex in vertices)
                 if (vertex.num > removedNum) vertex.num -= 1;
 
+            comboVertices.Items.RemoveAt(vertices.Count);
             vertexLabel.Visible = false;
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
@@ -275,7 +349,7 @@ namespace Graphs
 
         public void DeleteEdge(Edge sender)
         {
-            AdjustMatrix(sender.v1.num, sender.v2.num, edges.Count - 1, 0);
+            AdjustMatrix(sender.v1.num, sender.v2.num, 0);
             sender.oriented = false;
             splitContainer.Panel1.Controls.Remove(sender.weightLabel);
             edges.Remove(sender);
@@ -284,6 +358,7 @@ namespace Graphs
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
+        /************* DRAWING **************/
         public void PaintOver(Graphics g)
         {
             SolidBrush brush = new SolidBrush(Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(28)))), ((int)(((byte)(36))))));
@@ -327,6 +402,7 @@ namespace Graphs
             else g.FillEllipse(Brushes.White, new Rectangle(location.X - (size.Width / 2), location.Y - (size.Height / 2), size.Width, size.Height));
         }
 
+        /************* ALL ABOUT HOVER **************/
         public Vertex GetHoveredVertex(Point mPos)
         {
             foreach (Vertex vertex in vertices)
@@ -418,6 +494,7 @@ namespace Graphs
             return edge;
         }
 
+        /************* TIMERS **************/
         private void dragUpdate_Tick(object sender, EventArgs e)
         {
             if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition))
@@ -448,11 +525,13 @@ namespace Graphs
             hEdge = HoveredE(GetHoveredEdge(mPos));
         }
 
+        /************* CLICKY THINGS **************/
         private void fixedUpdate_Start(object sender, EventArgs e) { fixedUpdate.Start(); }
         private void fixedUpdate_End(object sender, EventArgs e) { fixedUpdate.Stop(); }
         private void copyBtn_Click(object sender, EventArgs e) { Clipboard.SetText(MatrixToString(vertices.Count)); }
-        
-        // weights //
+        private void insertBtn_Click(object sender, EventArgs e) { if (drag == false) InsertMatrix(pasteBox.Text); }
+
+        /************* METHODS FOR WEIGHTS **************/
         private void writeTimer_Tick(object sender, EventArgs e)
         {
             int lastIndex = writingOn.weightLabel.Text.Length - 1;
@@ -484,20 +563,65 @@ namespace Graphs
             writeTimer.Stop();
             writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
 
-            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = Convert.ToString(writingOn.weight); return; }
+            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = $"{writingOn.weight}"; return; }
             else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
+
+            writingOn.weightLabel.Text = $"{writingOn.weight}";
 
             if (writingOn.oriented == true)
             {
                 if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
                 else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
             }
-            else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, edges.Count, writingOn.weight);
+            else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, writingOn.weight);
 
+            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
-        // algs //
+        /************* AUXILIARY FUNCTIONS **************/
+        public bool validDistances(Point pos, int criticalDist)
+        {
+            foreach (Vertex vertex in vertices)
+            {
+                if (EvalDistance(pos, vertex.pos) < criticalDist) return false;
+            }
+
+            return true;
+        }
+
+        public void CapturePreviousState()
+        {
+            TextureBrush TakeAScreenshot()
+            {
+                Bitmap bmpPrevState = new Bitmap(splitContainer.Panel1.Width, splitContainer.Panel1.Height);
+                Graphics.FromImage(bmpPrevState).CopyFromScreen(PointToScreen(splitContainer.Panel1.Location), new Point(0, 0), splitContainer.Panel1.Size);
+                return new TextureBrush(bmpPrevState);
+            }
+
+            prevState = TakeAScreenshot();
+            penPrevState = new Pen(prevState, 15);
+        }
+
+        public float EvalDistance(Point a, Point b)
+        {
+            return (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+        }
+
+        public void ScaleVector(int mag, ref int u1, ref int u2)
+        {
+            float k = (float)Math.Sqrt(mag * mag / ((float)u1 * u1 + (float)u2 * u2));
+            u1 = (int)(k * u1); u2 = (int)(k * u2);
+        }
+
+        public Point GetTheMiddle(Point a, Point b)
+        {
+            Point vektor = new Point((b.X - a.X) / 2, (b.Y - a.Y) / 2);
+            if (EvalDistance(new Point(a.X + vektor.X, a.Y + vektor.Y), b) < EvalDistance(a, b)) return new Point(a.X + vektor.X, a.Y + vektor.Y);
+            else return new Point(a.X - vektor.X, a.Y - vektor.Y);
+        }
+
+        /************* METHODS FOR ALGORITHMS **************/
         public void switchLabels()
         {
             switch (alg)
@@ -532,7 +656,6 @@ namespace Graphs
                     break;
                 case 7: // Jarnik
                     algDescription.Text = "In computer science, Jarnik's algorithm (also known as Prim's algorithm) is a greedy algorithm that finds a minimum spanning tree for a weighted undirected graph.";
-                    // jak zobrazit minimalni kostru?
                     break;
                 case 8: // Topological Sort
                     algDescription.Text = "Topological sorting for Directed Acyclic Graph (DAG) is a linear ordering of vertices such that for every directed edge u v, vertex u comes before v in the ordering.";
@@ -560,18 +683,23 @@ namespace Graphs
         private void startBtn_Click(object sender, EventArgs e)
         {
             if (vertices.Count == 0) return;
+            bool orientedGraph = false;
+            foreach (Edge edge in edges) if (edge.oriented == true) orientedGraph = true;
+            int source = comboVertices.SelectedIndex;
+            if (source == -1) source = 0;
+            
             AlgObj = new Algorithms(adjMatrix, vertices.Count);
 
             switch (alg)
             {
                 case 0: // DFS
-                    resultLabel.Text = "[ " + AlgObj.soloDFS(0) + "]";
+                    resultLabel.Text = "[ " + AlgObj.soloDFS(source) + "]";
                     break;
                 case 1: // BFS
-                    resultLabel.Text = "[ " + AlgObj.BFS(0) + "]";
+                    resultLabel.Text = "[ " + AlgObj.BFS(source) + "]";
                     break;
                 case 2: // Dijkstra
-                    Tuple<int[], int[]> resTuple = AlgObj.Dijkstra(0);
+                    Tuple<int[], int[]> resTuple = AlgObj.Dijkstra(source);
                     if (resTuple.Item1[0] == -1)
                         resultLabel.Text = "Contains negative edges!";
                     else
@@ -579,7 +707,10 @@ namespace Graphs
                         resultMatrix.Text = "PrevArr: [ " + string.Join(", ", resTuple.Item2) + " ]";
                     break;
                 case 3: // Bridges
-                    resultLabel.Text = string.Join("\n", AlgObj.Bridges());
+                    if (orientedGraph) { resultLabel.Text = "Applies only to undirected graphs!"; return; }
+                    List<(int,int)> resList = AlgObj.Bridges();
+                    if (resList.Count > 0) resultLabel.Text = string.Join("\n", resList);
+                    else resultLabel.Text = "No bridges found!";
                     break;
                 case 4: // Komponenty
                     resultMatrix.Text = AlgObj.Components();
@@ -591,16 +722,16 @@ namespace Graphs
                     resultMatrix.Text = PrintMatrix(vertices.Count, AlgObj.FW());
                     break;
                 case 7: // Jarnik
+                    if (orientedGraph) { resultLabel.Text = "Applies only to undirected graphs!"; return; }
                     resultMatrix.Text = PrintMatrix(vertices.Count, AlgObj.Jarnik());
                     break;
                 case 8: // Topological Sort
                     resultLabel.Text = "[ " + AlgObj.TopologicalSort() + " ]";
                     break;
-
-            // checknout správnosti algoritmů
             }
         }
     }
+
 
     public class Vertex
     {
@@ -619,21 +750,23 @@ namespace Graphs
     {
         public Vertex v1;
         public Vertex v2;
-        public bool oriented = false;
+        public bool oriented;
         public Point[] ptsArrow;
-        public int weight = 1;
+        public int weight;
         public Label weightLabel;
 
-        public Edge(Vertex v1, Vertex v2, Point loc)
+        public Edge(Vertex v1, Vertex v2, Point loc, int weight = 1, bool oriented = false)
         {
             this.v1 = v1;
             this.v2 = v2;
+            this.oriented = oriented;
+            this.weight = weight;
 
             weightLabel = new Label();
             weightLabel.Location = loc;
             weightLabel.ForeColor = Color.White;
             weightLabel.Size = new Size(20, 20);
-            weightLabel.Text = "1";
+            weightLabel.Text = $"{weight}";
         }
     }
 
@@ -651,6 +784,7 @@ namespace Graphs
         {
             heap.Add(element);
             int j = heap.Count - 1;
+            pos[element.Item1] = j;
             BubbleUp(j);
         }
 
@@ -671,7 +805,7 @@ namespace Graphs
             if (heap.Count == 1) return -1;
 
             int min = heap[1].Item1; pos[min] = 0;
-            heap[1] = heap[heap.Count - 1];
+            heap[1] = heap[heap.Count - 1]; pos[heap[1].Item1] = 1;
             heap.RemoveAt(heap.Count - 1);
 
             int j = 1;
@@ -714,13 +848,16 @@ namespace Graphs
         }
     }
 
-    public class Algorithms // check pro orientované a neorientované alg
+
+    /// <summary>
+    /// This class contains specific graph algorithms that are made
+    /// to communicate with the Form1.
+    /// </summary>
+    public class Algorithms
     {
-        int[,] adjM;
-        int[][] nasled;
-        int n;
+        int[,] adjM; int[][] nasled;
         bool containsNegativeEdges;
-        const int infty = 999999;
+        int n; const int infty = 999999;
 
         public Algorithms(int[,] adjMatrix, int numVertices)
         {
@@ -782,9 +919,7 @@ namespace Graphs
         Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>> DFS()
         {
             int c = 0; int order = 0;
-            int[] opened = new int[n];
-            int[] pred = new int[n];
-            int[] low = new int[n]; Array.Fill(low, infty);
+            int[] opened = new int[n]; int[] pred = new int[n]; int[] low = new int[n];
             List<int> ends = new List<int>();
             string stromy = "";
 
@@ -795,7 +930,7 @@ namespace Graphs
 
             void Visit(int u, ref int order, ref string stromy)
             {
-                opened[u] = 1; order += 1; p[u] = order;
+                opened[u] = 1; order += 1; p[u] = order; low[u] = infty;
 
                 foreach (int neigh in nasled[u])
                 {
@@ -811,11 +946,13 @@ namespace Graphs
                     }
                     else
                     {
-                        low[u] = Math.Min(low[u], low[neigh]);
-
                         if (opened[neigh] == 1)
-                        {                           
-                            zpet.Add((u, neigh)); // zpětná
+                        {
+                            if (neigh != pred[u])
+                            {
+                                low[u] = Math.Min(low[u], p[neigh]);
+                                zpet.Add((u, neigh)); // zpětná
+                            }
                         }
                         else
                         {
@@ -975,15 +1112,14 @@ namespace Graphs
                 {
                     int u = stack[stack.Count - 1];
                     stack.RemoveAt(stack.Count - 1);
-                    seen[u] = true; // tady seen?
+                    seen[u] = true;
+                    sc_components[u] = c;
 
                     foreach (int neigh in Gt[u])
                     {
                         if (seen[neigh] == false)
                         {
                             stack.Add(neigh);
-                            //seen[neigh] = true;
-                            sc_components[neigh] = c;
                         }
                     }
                 }
@@ -1025,13 +1161,14 @@ namespace Graphs
         public int[,] Jarnik()
         {
             int[,] spanningTree = new int[n, n];
-            bool[] used = new bool[n];
+            int[] prev = new int[n];
             int[] key = new int[n];
             Heap Q = new Heap(n - 1);
 
             for (int i = 0; i < n; i++)
             {
                 key[i] = infty;
+                prev[i] = -1;
                 Q.Insert((i, key[i]));
             }
 
@@ -1042,12 +1179,14 @@ namespace Graphs
             {
                 int u = Q.ExtractMin();
 
+                if (prev[u] != -1) { spanningTree[u, prev[u]] = adjM[u, prev[u]]; spanningTree[prev[u], u] = adjM[prev[u], u]; }
+
                 foreach (int neigh in nasled[u])
                 {
                     if (Q.pos[neigh] != 0 && adjM[u, neigh] < key[neigh])
                     {
                         key[neigh] = adjM[u, neigh];
-                        spanningTree[u, neigh] = adjM[u, neigh]; spanningTree[neigh, u] = adjM[u, neigh];
+                        prev[neigh] = u;
                         Q.DecreaseKey(neigh, key[neigh]);
                     }
                 }
