@@ -110,8 +110,16 @@ namespace Graphs
                 {
                     if (edges[i].oriented == true)
                     {
-                        if (edges[i].ptsArrow[0] == edges[i].v2.pos) adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weight;
-                        else adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weight;
+                        if (edges[i].doubleOriented == true)
+                        {
+                            if (edges[i].ptsArrow[0] == edges[i].v2.pos) { adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weight; adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weightSnd; }
+                            else { adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weight; adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weightSnd; }
+                        }
+                        else
+                        {
+                            if (edges[i].ptsArrow[0] == edges[i].v2.pos) adjMatrix[edges[i].v1.num - 1, edges[i].v2.num - 1] = edges[i].weight;
+                            else adjMatrix[edges[i].v2.num - 1, edges[i].v1.num - 1] = edges[i].weight;
+                        }
                     }
                     else
                     {
@@ -168,8 +176,9 @@ namespace Graphs
 
                         if (adjMatrix[i, j] != adjMatrix[j, i])
                         {
-                            if (adjMatrix[j, i] == 0) { InitEdge(vertices[i], vertices[j], adjMatrix[i, j], true); }
-                            else { InitEdge(vertices[j], vertices[i], adjMatrix[j, i], true);}
+                            if (adjMatrix[j, i] == 0) InitEdge(vertices[i], vertices[j], adjMatrix[i, j], true);
+                            else if (adjMatrix[i, j] == 0) InitEdge(vertices[j], vertices[i], adjMatrix[j, i], true);
+                            else InitEdge(vertices[i], vertices[j], adjMatrix[i, j], true, true, adjMatrix[j, i]);
                         }
                         else if (adjMatrix[i, j] != 0) { InitEdge(vertices[i], vertices[j], adjMatrix[i, j]); }
                         j += 1;
@@ -251,12 +260,16 @@ namespace Graphs
         }
 
         /************* GRAPH CONTROLS **************/
-        public void InitEdge(Vertex v1, Vertex v2, int weight = 1, bool oriented = false) // inicializace hrany
+        public void InitEdge(Vertex v1, Vertex v2, int weight = 1, bool oriented = false, bool doubleOriented = false, int weightSnd = 1) // inicializace hrany
         {
-            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos), weight); // vytvořím Edge objekt, kde je weightLabel vprostřed hrany
+            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos), weight, false, weightSnd); // vytvořím Edge objekt, kde je weightLabel vprostřed hrany
             splitContainer.Panel1.Controls.Add(edge.weightLabel);
             edges.Add(edge);
-            if (oriented == true) LeftClickedEdge(edge, v2.pos); // pokud tvořím orientovanou hranu, pustím funkci která ji na ni přemaluje
+            if (oriented == true) // pokud tvořím orientovanou hranu, pustím funkci která ji na ni přemaluje
+            {
+                LeftClickedEdge(edge, v2.pos);
+                if (doubleOriented) LeftClickedEdge(edge, v1.pos);  
+            } 
         }
 
         public void LeftClickedVertex(Vertex sender) // začnu tvořit nebo ukotvím hranu
@@ -307,16 +320,44 @@ namespace Graphs
                 ScaleVector(15, ref u1, ref u2); // přeškáluji normálový vektor
 
                 if (sender.oriented == true)
-                { 
-                    sender.oriented = false;
-                    AdjustMatrix(sender.v1.num, sender.v2.num, 1);
+                {
+                    if (sender.doubleOriented == true) // pokud je dvojitě orientovaná, každé kliknutí způsobí přesun k jednoduché orientovanosti
+                    {
+                        if (closerV.pos == sender.ptsArrow[0]) // pokud je orientovanost jednoduchá, používají se vždy první tři údaje
+                        {
+                            for (int i = 0; i < 3; i++) sender.ptsArrow[i] = sender.ptsArrow[i + 3];
+                        }
+
+                        if (closerV == sender.v2) AdjustMatrix(sender.v1.num, closerV.num, 0, true);
+                        else AdjustMatrix(sender.v2.num, closerV.num, 0, true);
+
+                        sender.doubleOriented = false;
+                    }
+                    else // při jednoduché orientovanosti mohou nastat dvě možnosti
+                    {
+                        if (sender.ptsArrow[0] == closerV.pos) // klikl jsem k orientovanému konci hrany
+                        {
+                            sender.oriented = false; // ztrácím orientovanost
+                            AdjustMatrix(sender.v1.num, sender.v2.num, sender.weight);
+                        }
+                        else // klikl jsem k neorientovanému konci hrany
+                        {
+                            sender.doubleOriented = true; // získávám oboustrannou orientovanost
+                            sender.ptsArrow[3] = closerV.pos; sender.ptsArrow[4] = new Point(pt.X - u2, pt.Y + u1); sender.ptsArrow[5] = new Point(pt.X + u2, pt.Y - u1);
+
+                            if (closerV == sender.v2) AdjustMatrix(sender.v1.num, closerV.num, sender.weightSnd, true);
+                            else AdjustMatrix(sender.v2.num, closerV.num, sender.weightSnd, true);
+                        }
+                    }
                 }
                 else // ukotvím v bodech vzdálených o normálový vektor od pt čáry, směřující k bližímu vrcholu tak, že se nakreslí šipka
-                {                  
+                {
                     sender.oriented = true;
-                    sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
-                    if (closerV == sender.v1) AdjustMatrix(sender.v1.num, sender.v2.num, 0, true);
-                    else AdjustMatrix(sender.v2.num, sender.v1.num, 0, true);
+                    sender.ptsArrow = new Point[6];
+                    sender.ptsArrow[0] = closerV.pos; sender.ptsArrow[1] = new Point(pt.X - u2, pt.Y + u1); sender.ptsArrow[2] = new Point(pt.X + u2, pt.Y - u1);
+
+                    if (closerV == sender.v1) { AdjustMatrix(sender.v1.num, sender.v2.num, 0, true); AdjustMatrix(sender.v2.num, sender.v1.num, sender.weight, true); }
+                    else { AdjustMatrix(sender.v2.num, sender.v1.num, 0, true); AdjustMatrix(sender.v1.num, sender.v2.num, sender.weight, true); }
                 }
 
                 PaintOver(g);
@@ -350,10 +391,10 @@ namespace Graphs
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
-        public void DeleteEdge(Edge sender) // odstraním a přemalji hranu
+        public void DeleteEdge(Edge sender) // odstraním a přemaluji hranu
         {
             AdjustMatrix(sender.v1.num, sender.v2.num, 0);
-            sender.oriented = false;
+            sender.oriented = false; sender.doubleOriented = false;
             splitContainer.Panel1.Controls.Remove(sender.weightLabel);
             edges.Remove(sender);
             PaintOver(splitContainer.Panel1.CreateGraphics());
@@ -371,6 +412,12 @@ namespace Graphs
                     DrawEdge(g, new Pen(Color.White, 10), edge.v1.pos, edge.v2.pos);
                     if (edge.oriented)
                     {
+                        if (edge.doubleOriented)
+                        {
+                            DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[3], edge.ptsArrow[4]);
+                            DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[3], edge.ptsArrow[5]);
+                        }
+
                         DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[1]);
                         DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[2]);
                     }
@@ -480,7 +527,17 @@ namespace Graphs
             if (edge == null) // nemám kurzor na hraně, přemaluji na počáteční stav
             {
                 DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
-                if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
+                if (hEdge.oriented)
+                { 
+                    if (hEdge.doubleOriented)
+                    {
+                        DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[3], hEdge.ptsArrow[4]);
+                        DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[3], hEdge.ptsArrow[5]);
+                    }
+
+                    DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);
+                    DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);
+                }                
             }
             else
             {
@@ -800,17 +857,17 @@ namespace Graphs
     {
         public Vertex v1;
         public Vertex v2;
-        public bool oriented;
-        public Point[] ptsArrow; // zaznamená 3 body - vrchol, do kterého jde orientovaná hrana a dva body odkud se kreslí šipka
-        public int weight;
+        public bool oriented = false; public bool doubleOriented = false;
+        public Point[] ptsArrow; // zaznamenává dvakrát po třech bodech - vrchol, do kterého jde orientovaná hrana a dva body odkud se kreslí šipka
+        public int weight; public int weightSnd;
         public Label weightLabel;
 
-        public Edge(Vertex v1, Vertex v2, Point loc, int weight = 1, bool oriented = false)
+        public Edge(Vertex v1, Vertex v2, Point loc, int weight = 1, bool oriented = false, int weightSnd = 1, bool doubleOriented = false)
         {
             this.v1 = v1;
             this.v2 = v2;
-            this.oriented = oriented;
-            this.weight = weight;
+            this.oriented = oriented; this.doubleOriented = doubleOriented;
+            this.weight = weight; this.weightSnd = weightSnd;
 
             weightLabel = new Label();
             weightLabel.Location = loc;
