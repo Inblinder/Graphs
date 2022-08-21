@@ -34,6 +34,8 @@ namespace Graphs
             this.splitContainer = new System.Windows.Forms.SplitContainer();
             this.vertexLabel = new System.Windows.Forms.Label();
             this.basicMsg = new System.Windows.Forms.Label();
+            this.exampleBtn = new System.Windows.Forms.Button();
+            this.exampleMsg = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
             this.comboVertices = new System.Windows.Forms.ComboBox();
             this.labelSource = new System.Windows.Forms.Label();
@@ -46,9 +48,7 @@ namespace Graphs
             this.rightBtn = new System.Windows.Forms.Button();
             this.leftBtn = new System.Windows.Forms.Button();
             this.panelMatrix = new System.Windows.Forms.Panel();
-            this.exampleMsg = new System.Windows.Forms.Label();
             this.errorMsg = new System.Windows.Forms.Label();
-            this.exampleBtn = new System.Windows.Forms.Button();
             this.copyBtn = new System.Windows.Forms.Button();
             this.pasteBox = new System.Windows.Forms.TextBox();
             this.insertBtn = new System.Windows.Forms.Button();
@@ -86,6 +86,8 @@ namespace Graphs
             // splitContainer.Panel2
             // 
             this.splitContainer.Panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(252)))));
+            this.splitContainer.Panel2.Controls.Add(this.exampleBtn);
+            this.splitContainer.Panel2.Controls.Add(this.exampleMsg);
             this.splitContainer.Panel2.Controls.Add(this.panel1);
             this.splitContainer.Panel2.Controls.Add(this.panelMatrix);
             this.splitContainer.Panel2.Controls.Add(this.label1);
@@ -114,6 +116,28 @@ namespace Graphs
             this.basicMsg.Size = new System.Drawing.Size(145, 20);
             this.basicMsg.TabIndex = 0;
             this.basicMsg.Text = "click to create vertex";
+            // 
+            // exampleBtn
+            // 
+            this.exampleBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.exampleBtn.Location = new System.Drawing.Point(409, 787);
+            this.exampleBtn.Name = "exampleBtn";
+            this.exampleBtn.Size = new System.Drawing.Size(30, 27);
+            this.exampleBtn.TabIndex = 9;
+            this.exampleBtn.Text = "🡳";
+            this.exampleBtn.UseVisualStyleBackColor = true;
+            this.exampleBtn.Click += new System.EventHandler(this.exampleBtn_Click);
+            // 
+            // exampleMsg
+            // 
+            this.exampleMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.exampleMsg.AutoSize = true;
+            this.exampleMsg.Font = new System.Drawing.Font("Segoe UI", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.exampleMsg.Location = new System.Drawing.Point(396, 754);
+            this.exampleMsg.Name = "exampleMsg";
+            this.exampleMsg.Size = new System.Drawing.Size(52, 30);
+            this.exampleMsg.TabIndex = 15;
+            this.exampleMsg.Text = " Import\r\nexample";
             // 
             // panel1
             // 
@@ -176,7 +200,7 @@ namespace Graphs
             // resultLabel
             // 
             this.resultLabel.AutoSize = true;
-            this.resultLabel.Location = new System.Drawing.Point(80, 188);
+            this.resultLabel.Location = new System.Drawing.Point(69, 188);
             this.resultLabel.MaximumSize = new System.Drawing.Size(100, 100);
             this.resultLabel.Name = "resultLabel";
             this.resultLabel.Size = new System.Drawing.Size(0, 20);
@@ -239,9 +263,7 @@ namespace Graphs
             // panelMatrix
             // 
             this.panelMatrix.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.panelMatrix.Controls.Add(this.exampleMsg);
             this.panelMatrix.Controls.Add(this.errorMsg);
-            this.panelMatrix.Controls.Add(this.exampleBtn);
             this.panelMatrix.Controls.Add(this.copyBtn);
             this.panelMatrix.Controls.Add(this.pasteBox);
             this.panelMatrix.Controls.Add(this.insertBtn);
@@ -252,17 +274,6 @@ namespace Graphs
             this.panelMatrix.Size = new System.Drawing.Size(422, 350);
             this.panelMatrix.TabIndex = 5;
             // 
-            // exampleMsg
-            // 
-            this.exampleMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.exampleMsg.AutoSize = true;
-            this.exampleMsg.Font = new System.Drawing.Font("Segoe UI", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.exampleMsg.Location = new System.Drawing.Point(364, 281);
-            this.exampleMsg.Name = "exampleMsg";
-            this.exampleMsg.Size = new System.Drawing.Size(52, 30);
-            this.exampleMsg.TabIndex = 15;
-            this.exampleMsg.Text = " Import\r\nexample";
-            // 
             // errorMsg
             // 
             this.errorMsg.AutoSize = true;
@@ -271,16 +282,6 @@ namespace Graphs
             this.errorMsg.Name = "errorMsg";
             this.errorMsg.Size = new System.Drawing.Size(0, 20);
             this.errorMsg.TabIndex = 8;
-            // 
-            // exampleBtn
-            // 
-            this.exampleBtn.Location = new System.Drawing.Point(375, 314);
-            this.exampleBtn.Name = "exampleBtn";
-            this.exampleBtn.Size = new System.Drawing.Size(30, 27);
-            this.exampleBtn.TabIndex = 9;
-            this.exampleBtn.Text = "🡳";
-            this.exampleBtn.UseVisualStyleBackColor = true;
-            this.exampleBtn.Click += new System.EventHandler(this.exampleBtn_Click);
             // 
             // copyBtn
             // 
