@@ -53,7 +53,6 @@ namespace Graphs
             this.pasteBox = new System.Windows.Forms.TextBox();
             this.insertBtn = new System.Windows.Forms.Button();
             this.matrix = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
             this.dragUpdate = new System.Windows.Forms.Timer(this.components);
             this.fixedUpdate = new System.Windows.Forms.Timer(this.components);
             this.writeTimer = new System.Windows.Forms.Timer(this.components);
@@ -90,7 +89,6 @@ namespace Graphs
             this.splitContainer.Panel2.Controls.Add(this.exampleMsg);
             this.splitContainer.Panel2.Controls.Add(this.panel1);
             this.splitContainer.Panel2.Controls.Add(this.panelMatrix);
-            this.splitContainer.Panel2.Controls.Add(this.label1);
             this.splitContainer.Panel2.Cursor = System.Windows.Forms.Cursors.Arrow;
             this.splitContainer.Size = new System.Drawing.Size(1402, 823);
             this.splitContainer.SplitterDistance = 947;
@@ -152,7 +150,7 @@ namespace Graphs
             this.panel1.Controls.Add(this.algLabel);
             this.panel1.Controls.Add(this.rightBtn);
             this.panel1.Controls.Add(this.leftBtn);
-            this.panel1.Location = new System.Drawing.Point(14, 70);
+            this.panel1.Location = new System.Drawing.Point(16, 13);
             this.panel1.MinimumSize = new System.Drawing.Size(320, 350);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(422, 350);
@@ -323,16 +321,6 @@ namespace Graphs
             this.matrix.TabIndex = 1;
             this.matrix.Text = "[...]";
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label1.Location = new System.Drawing.Point(18, 19);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(113, 32);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "G = (V, E)";
-            // 
             // dragUpdate
             // 
             this.dragUpdate.Interval = 20;
@@ -381,7 +369,6 @@ namespace Graphs
         #endregion
 
         private System.Windows.Forms.SplitContainer splitContainer;
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label basicMsg;
         private System.Windows.Forms.Label matrix;
         private System.Windows.Forms.Timer dragUpdate;
