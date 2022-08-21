@@ -14,76 +14,79 @@ namespace Graphs
     {
         List<Vertex> vertices = new List<Vertex>();
         List<Edge> edges = new List<Edge>();
-        int[,] adjMatrix = new int[8, 8];
-        Vertex origin; Vertex termin;
+        int[,] adjMatrix = new int[8, 8]; // matice sousednosti
+        Vertex origin; Vertex termin; // počátek a konec hran
         public bool drag = false;
-        Pen penPrevState; TextureBrush prevState;
-        Point prevMousePos; Point pos;
-        Vertex hVertex = null; Edge hEdge = null;
-        Edge writingOn = null;
+        Pen penPrevState; TextureBrush prevState; // pera pro přemalovávání na předchozí stav
+        Point prevMousePos; Point pos; 
+        Vertex hVertex = null; Edge hEdge = null; // hovered objekty
+        Edge writingOn = null; // hrana, kde přepisuji její váhu
 
         Algorithms AlgObj;
         string[] algoNames = new string[9] { "DFS", "BFS", "Dijkstra", "Bridges", "Components", "SSK", "FW", "Jarnik", "Topological Sort" };
-        int alg = 0; const int infty = 999999;
+        int alg = 0; // na kolikátém algoritmu v pořadí zrovna jsem
+        const int infty = 999999;
 
         public Form1()
         {
             InitializeComponent();
+            this.Resize += Form1_Resize;
+            this.LocationChanged += Form1_LocationChanged;
         }
 
         /************* DRIVING METHOD **************/
-        private void Clicked(object sender, MouseEventArgs e)
+        private void Clicked(object sender, MouseEventArgs e) // spustí se po kliknutí na Panel1
         {
             Graphics g = splitContainer.Panel1.CreateGraphics();
-            if (KeyPreview) { StopWriting(); return; }
+            if (KeyPreview) { StopWriting(); return; } // pokud jsem zrovna přepisoval váhu hrany
  
             if (e.Button == MouseButtons.Left)
             {
-                if (hVertex != null)
+                if (hVertex != null) // pokud mám myš na vrcholu
                 {
                     if (drag)
-                        foreach (Edge edge in edges)
+                        foreach (Edge edge in edges) // zkontroluji, jestli už taková hrana neexistuje
                             if (edge.v1 == origin && edge.v2 == hVertex || edge.v2 == origin && edge.v1 == hVertex) return;
 
                     pos = e.Location;
-                    LeftClickedVertex(hVertex);
+                    LeftClickedVertex(hVertex); // dokončím, nebo začnu tovřit novou hranu z hovered vrcholu
                     return;
                 }
 
                 pos = e.Location;
 
-                if (drag)
+                if (drag) // pokud jsem zrovna táhnul hranu
                 {
-                    termin = new Vertex(pos, vertices.Count + 1);
-                    InitEdge(origin, termin);
-                    AdjustMatrix(origin.num, termin.num, 1);
-                    origin = termin;
+                    termin = new Vertex(pos, vertices.Count + 1); // nastavím konečný vrchol na pozici myši
+                    InitEdge(origin, termin); // vytvořím hranu
+                    AdjustMatrix(origin.num, termin.num, 1); // a předělám matici
+                    origin = termin; // přenastavím počáteční vrchol na konečný a z něho táhnu hranu
                 }
                 else
                 {
-                    if (hEdge != null) { LeftClickedEdge(hEdge, pos); return; } // hover weights
-                    origin = new Vertex(pos, vertices.Count + 1);
-                    drag = true;
+                    if (hEdge != null) { LeftClickedEdge(hEdge, pos); return; } // pokud existovala hovered hrana
+                    origin = new Vertex(pos, vertices.Count + 1); // nastavím počáteční vrchol hrany
+                    drag = true; // tažení na true
                 }
 
                 vertices.Add(origin);
-                comboVertices.Items.Add(origin.num);
+                comboVertices.Items.Add(origin.num); // přidám nový vrchol do source možností
                 DrawVertex(g, pos, new Size(30, 30));
-                CheckMatrixSize();
-                matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
-                CapturePreviousState();
-                dragUpdate.Start();
+                CheckMatrixSize(); // zkontroluji, jestli mi nepřeteče matice
+                matrix.Text = PrintMatrix(vertices.Count, adjMatrix); // vypíšu ji
+                CapturePreviousState(); // zaznamenám stav obrazovky, který budu používat na přemalování
+                dragUpdate.Start(); // spustím přemalovávání hrany, která má konec v pozici myši
             }
             else
             {
                 if (drag == false)
                 {
-                    if (hVertex != null) { DeleteVertex(hVertex); return; }
-                    if (hEdge != null) { DeleteEdge(hEdge); return; }
+                    if (hVertex != null) { DeleteVertex(hVertex); return; } // pokud jsem klikl na hovered vertex, nebo
+                    if (hEdge != null) { DeleteEdge(hEdge); return; } // na hovered edge, jiným než levým, odstraním
                 }
                 else
                 {
-                    dragUpdate.Stop();
+                    dragUpdate.Stop(); // zastavím tažení hrany
                     drag = false;
                     DrawEdge(g, penPrevState, pos, prevMousePos);
                 }
@@ -91,13 +94,13 @@ namespace Graphs
         }
 
         /************* ALL ABOUT MATRIX **************/
-        public void AdjustMatrix(int v_1, int v_2, int val, bool orient = false)
+        public void AdjustMatrix(int v_1, int v_2, int val, bool orient = false) // přepíšu hodnotu v matici sousednosti
         {
             adjMatrix[v_1 - 1, v_2 - 1] = val;
             if (orient == false) adjMatrix[v_2 - 1, v_1 - 1] = val;
         }
 
-        public void CheckMatrixSize()
+        public void CheckMatrixSize() // zkontroluji, jestli matice nepřetéká, pokud ano, dvakrát ji zvětším a přepíšu její hodnoty
         {
             int size = adjMatrix.GetLength(0);
             if (vertices.Count >= size)
@@ -119,7 +122,7 @@ namespace Graphs
             }
         }
 
-        public string PrintMatrix(int vertex_count, int[,] matrix)
+        public string PrintMatrix(int vertex_count, int[,] matrix) // vypíšu matici do stringu s respektem k nekonečnu
         {
             string m = "";
             for (int i = 0; i < vertex_count; i++)
@@ -137,17 +140,17 @@ namespace Graphs
             return m;
         }
 
-        public void InsertMatrix(string strMatrix)
+        public void InsertMatrix(string strMatrix) // funkce, která zpracuje string z boxu pro importování matic
         {
-            void import(int size, List<int> numbers)
+            void import(int size, List<int> numbers) // přepíšu čísla do validní matice sousednosti
             {
                 adjMatrix = new int[size, size];
-                for (int i = edges.Count - 1; i >= 0; i--) { splitContainer.Panel1.Controls.Remove(edges[i].weightLabel); edges[i] = null;}
+                for (int i = edges.Count - 1; i >= 0; i--) { splitContainer.Panel1.Controls.Remove(edges[i].weightLabel); edges[i] = null;} // odstraním labely vah hran
                 vertices = new List<Vertex>();
                 edges = new List<Edge>();
                 Random r = new Random();
 
-                for (int k = 0; k < size; k++)
+                for (int k = 0; k < size; k++) // každému vrcholu dám random pozici s podmínkou, že každý vrchol musí být od ostatních vzdálený alespoň na určitou vzdálenost
                 {
                     Point randPos = new Point(r.Next(150, splitContainer.Panel1.Width - 150), r.Next(150, splitContainer.Panel1.Height - 150));
                     while (validDistances(randPos, 150) == false) randPos = new Point(r.Next(150, splitContainer.Panel1.Width - 150), r.Next(150, splitContainer.Panel1.Height - 150));
@@ -159,9 +162,9 @@ namespace Graphs
                 {
                     int j = 0;
 
-                    while (j < i)
+                    while (j < i)  // zapíšu čísla do matice sousednosti a přidám hrany
                     {
-                        adjMatrix[i, j] = numbers[i * size + j]; adjMatrix[j, i] = numbers[j * size + i];
+                        adjMatrix[i, j] = numbers[i * size + j]; adjMatrix[j, i] = numbers[j * size + i]; 
 
                         if (adjMatrix[i, j] != adjMatrix[j, i])
                         {
@@ -173,16 +176,16 @@ namespace Graphs
                     }
                 }
 
-                PaintOver(splitContainer.Panel1.CreateGraphics());
-                CapturePreviousState();
-                comboVertices.Items.Clear();
-                for (int i = 1; i < size + 1; i++) comboVertices.Items.Add(i);
-                matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
+                PaintOver(splitContainer.Panel1.CreateGraphics()); // přemaluji celý graf
+                CapturePreviousState(); // zachytím stav grafu
+                comboVertices.Items.Clear(); // vymažu dosavadní source vrcholy
+                for (int i = 1; i < size + 1; i++) comboVertices.Items.Add(i); // přidám source vrcholy
+                matrix.Text = PrintMatrix(vertices.Count, adjMatrix); // vypíši novou matici sousednosti
             }
 
-            void error(string msg) { errorMsg.Text = "Error:\n" + msg; }
+            void error(string msg) { errorMsg.Text = "Error:\n" + msg; } // funkce pro vypisování chyb
 
-            int readNumber(ref int index)
+            int readNumber(ref int index) // čtu číslo, které by mělo následovat po ',' nebo '['
             {
                 string num = "";
 
@@ -196,24 +199,24 @@ namespace Graphs
                 return int.Parse(num);
             }
 
-            strMatrix = strMatrix.Replace(" ", "");
+            strMatrix = strMatrix.Replace(" ", ""); // vyčistím string
             if (strMatrix.Length < 2) error("elements");
-            else { strMatrix = strMatrix.Remove(0, 1); strMatrix = strMatrix.Remove(strMatrix.Length - 1); }
+            else { strMatrix = strMatrix.Remove(0, 1); strMatrix = strMatrix.Remove(strMatrix.Length - 1); } // odstraním [ a ] z konců stringu
 
-            List<int> numbers = new List<int>();
+            List<int> numbers = new List<int>(); // zde budu zapisovat přečtená čísla
             int count = 0; int index = 0; int rows = 0;
 
-            while (index < strMatrix.Length)
+            while (index < strMatrix.Length) // čtu a kontroluji parametry
             {
-                switch (strMatrix[index])
+                switch (strMatrix[index]) // na co jsem narazil
                 {
                     case '[':
-                        count += 1; index += 1; 
+                        count += 1; index += 1; // dávám pozor na správné uzávorkování
                         if (count > 1) { error("brackets"); return; }
                         numbers.Add(readNumber(ref index));
                         break;
                     case ']':
-                        count -= 1; index += 1; rows += 1;
+                        count -= 1; index += 1; rows += 1; // ] by měla značit konec jednoho řádku
                         if (count < 0) { error("brackets"); return; }
                         break;
                     case ',':
@@ -222,16 +225,16 @@ namespace Graphs
                             numbers.Add(readNumber(ref index));
                         break;
                     default:
-                        error("elements");
+                        error("elements"); // pokud se vymyká z povolených znaků
                         return;
                 }
             }
 
-            if (count != 0 || index == 0 || rows * rows != numbers.Count) error("elements");
-            else { import(rows, numbers); }
+            if (count != 0 || index == 0 || rows * rows != numbers.Count) error("elements"); // pokud string nedodežel zásady matice
+            else { import(rows, numbers); } // pokud ano, nahraji matici
         }
 
-        public string MatrixToString(int vertex_count)
+        public string MatrixToString(int vertex_count) // vypsání matice do stringu pro zkopírování na pozdější použití
         {
             string m = "[";
             for (int i = 0; i < vertex_count; i++)
@@ -248,17 +251,17 @@ namespace Graphs
         }
 
         /************* GRAPH CONTROLS **************/
-        public void InitEdge(Vertex v1, Vertex v2, int weight = 1, bool oriented = false)
+        public void InitEdge(Vertex v1, Vertex v2, int weight = 1, bool oriented = false) // inicializace hrany
         {
-            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos), weight);
+            Edge edge = new Edge(v1, v2, GetTheMiddle(v1.pos, v2.pos), weight); // vytvořím Edge objekt, kde je weightLabel vprostřed hrany
             splitContainer.Panel1.Controls.Add(edge.weightLabel);
             edges.Add(edge);
-            if (oriented == true) LeftClickedEdge(edge, v2.pos);
+            if (oriented == true) LeftClickedEdge(edge, v2.pos); // pokud tvořím orientovanou hranu, pustím funkci která ji na ni přemaluje
         }
 
-        public void LeftClickedVertex(Vertex sender)
+        public void LeftClickedVertex(Vertex sender) // začnu tvořit nebo ukotvím hranu
         {
-            if (drag == true)
+            if (drag == true) // ukotvím hranu
             { 
                 InitEdge(origin, sender);
                 AdjustMatrix(origin.num, sender.num, 1);
@@ -271,25 +274,25 @@ namespace Graphs
             PaintOver(splitContainer.Panel1.CreateGraphics());
             CapturePreviousState();
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
-            dragUpdate.Start();
+            dragUpdate.Start(); // začnu s přemalováváním hrany
         }
 
-        public void LeftClickedEdge(Edge sender, Point pos)
+        public void LeftClickedEdge(Edge sender, Point pos) // začnu přepisovat váhu kliknuté hrany, nebo přemaluji orientovanost
         {
-            float fromV1 = EvalDistance(pos, sender.v1.pos);
-            float fromV2 = EvalDistance(pos, sender.v2.pos);
+            float fromV1 = EvalDistance(pos, sender.v1.pos); // vyhodnotím vzdálenosti vrcholů od myši
+            float fromV2 = EvalDistance(pos, sender.v2.pos); 
 
-            if (Math.Min(fromV1, fromV2) < 50)
+            if (Math.Min(fromV1, fromV2) < 50) // pokud se kliklo dostatečně blízko k jednomu z vrcholů
             {
                 Graphics g = splitContainer.Panel1.CreateGraphics();
-                Point pt; Vertex closerV;
-                int u1 = sender.v1.pos.X - sender.v2.pos.X;
+                Point pt; Vertex closerV; // pt - bod na hraně vzdálen od closerV (bližšího vrcholu) určitou vzdálenost
+                int u1 = sender.v1.pos.X - sender.v2.pos.X; // naleznu vektor 'u' hrany
                 int u2 = sender.v1.pos.Y - sender.v2.pos.Y;
-                ScaleVector(35, ref u1, ref u2);
-                float lengthOfEdge = EvalDistance(sender.v1.pos, sender.v2.pos);
+                ScaleVector(35, ref u1, ref u2); // vektor si přeškáluji
+                float lengthOfEdge = EvalDistance(sender.v1.pos, sender.v2.pos); // zjistím délku hrany
 
                 if (fromV1 < fromV2)
-                {
+                { // najdu bod, který je od bližšího vrcholu vzdálený o vektor 'u' a není od vzdálenějšího vrcholu dále než je délka hrany (aby ležel na hraně)
                     closerV = sender.v1;
                     if (EvalDistance(new Point(closerV.pos.X + u1, closerV.pos.Y + u2), sender.v2.pos) < lengthOfEdge) pt = new Point(closerV.pos.X + u1, closerV.pos.Y + u2);
                     else pt = new Point((closerV.pos.X - u1), (closerV.pos.Y - u2));
@@ -301,14 +304,14 @@ namespace Graphs
                     else pt = new Point((closerV.pos.X - u1), (closerV.pos.Y - u2));
                 }
 
-                ScaleVector(15, ref u1, ref u2);
+                ScaleVector(15, ref u1, ref u2); // přeškáluji normálový vektor
 
                 if (sender.oriented == true)
                 { 
                     sender.oriented = false;
                     AdjustMatrix(sender.v1.num, sender.v2.num, 1);
                 }
-                else
+                else // ukotvím v bodech vzdálených o normálový vektor od pt čáry, směřující k bližímu vrcholu tak, že se nakreslí šipka
                 {                  
                     sender.oriented = true;
                     sender.ptsArrow = new Point[3] { closerV.pos, new Point(pt.X - u2, pt.Y + u1), new Point(pt.X + u2, pt.Y - u1) };
@@ -320,24 +323,24 @@ namespace Graphs
                 CapturePreviousState();
                 matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
             }
-            else
+            else // jestli je kliknutí vzdáleno více než určitá vzdálenost je to signál pro přepisování váhy
             {
                 sender.weightLabel.Text = "";
-                writingOn = sender;
+                writingOn = sender; // na jakou hranu píšu
                 KeyPreview = true;
-                writeTimer.Start();
+                writeTimer.Start(); // spustím psací timer
             }        
         }
 
-        public void DeleteVertex(Vertex sender)
+        public void DeleteVertex(Vertex sender) // odstraním a přemaluji vrchol a k němu napojené hrany
         {
             for (int i = edges.Count - 1; i >= 0; i--)
                 if (edges[i].v1 == sender || edges[i].v2 == sender) { splitContainer.Panel1.Controls.Remove(edges[i].weightLabel); edges.RemoveAt(i); }
 
-                    int removedNum = sender.num;
+            int removedNum = sender.num;
             vertices.Remove(sender);
 
-            foreach (Vertex vertex in vertices)
+            foreach (Vertex vertex in vertices) // přepíšu čísla vrcholů, které měly větší číslo než odstraňovaný
                 if (vertex.num > removedNum) vertex.num -= 1;
 
             comboVertices.Items.RemoveAt(vertices.Count);
@@ -347,7 +350,7 @@ namespace Graphs
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
 
-        public void DeleteEdge(Edge sender)
+        public void DeleteEdge(Edge sender) // odstraním a přemalji hranu
         {
             AdjustMatrix(sender.v1.num, sender.v2.num, 0);
             sender.oriented = false;
@@ -359,43 +362,43 @@ namespace Graphs
         }
 
         /************* DRAWING **************/
-        public void PaintOver(Graphics g)
+        public void PaintOver(Graphics g) // přemaluji vrcholy i hrany
         {
+            void RedrawEdges(Graphics g)
+            {
+                foreach (Edge edge in edges)
+                {
+                    DrawEdge(g, new Pen(Color.White, 10), edge.v1.pos, edge.v2.pos);
+                    if (edge.oriented)
+                    {
+                        DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[1]);
+                        DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[2]);
+                    }
+                }
+            }
+
+            void RedrawVertices(Graphics g)
+            {
+                foreach (Vertex vertex in vertices)
+                {
+                    DrawVertex(g, vertex.pos, new Size(30, 30));
+                }
+            }
+
             SolidBrush brush = new SolidBrush(Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(28)))), ((int)(((byte)(36))))));
-            g.FillRectangle(brush, new Rectangle(0, 0, splitContainer.Panel1.Width, splitContainer.Panel1.Height));
+            g.FillRectangle(brush, new Rectangle(0, 0, splitContainer.Panel1.Width, splitContainer.Panel1.Height)); // přemaluji celý Panel1 barvou pozadí
             RedrawEdges(g);
             RedrawVertices(g);
         }
 
-        public void RedrawEdges(Graphics g)
-        {
-            foreach (Edge edge in edges)
-            { 
-                DrawEdge(g, new Pen(Color.White, 10), edge.v1.pos, edge.v2.pos);
-                if (edge.oriented)
-                {
-                    DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[1]);
-                    DrawEdge(g, new Pen(Color.White, 7), edge.ptsArrow[0], edge.ptsArrow[2]);
-                }
-            }
-        }
-
-        public void RedrawVertices(Graphics g)
-        {
-            foreach (Vertex vertex in vertices)
-            {
-                DrawVertex(g, vertex.pos, new Size(30, 30));
-            }
-        }
-
-        public void DrawEdge(Graphics g, Pen pen, Point pt1, Point pt2)
+        public void DrawEdge(Graphics g, Pen pen, Point pt1, Point pt2) // namaluji HighQuality Line specifickým perem se zaobleným koncem
         {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
             pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
             g.DrawLine(pen, pt1, pt2);
         }
 
-        public void DrawVertex(Graphics g, Point location, Size size, TextureBrush brush = null)
+        public void DrawVertex(Graphics g, Point location, Size size, TextureBrush brush = null) // namaluji HighQuality Ellipse specificým Brush nebo TextureBrush
         {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
             if (brush != null) g.FillEllipse(brush, new Rectangle(location.X - (size.Width / 2), location.Y - (size.Height / 2), size.Width, size.Height));
@@ -403,7 +406,7 @@ namespace Graphs
         }
 
         /************* ALL ABOUT HOVER **************/
-        public Vertex GetHoveredVertex(Point mPos)
+        public Vertex GetHoveredVertex(Point mPos) // zjistím, na kterém vrcholu mám kurzor (pokud mám)
         {
             foreach (Vertex vertex in vertices)
             {
@@ -414,11 +417,11 @@ namespace Graphs
             return null;
         }
 
-        public Edge GetHoveredEdge(Point mPos)
+        public Edge GetHoveredEdge(Point mPos) // zjistím, na které hraně mám vrchol (pokud mám)
         {
             float a; float b; float c; float dist; float denom; float distToMouseA; float distToMouseB;
 
-            foreach(Edge edge in edges)
+            foreach(Edge edge in edges) // jak jsem vzdálený od přímky která vede hranou
             {               
                 a = edge.v2.pos.Y - edge.v1.pos.Y;
                 b = -edge.v2.pos.X + edge.v1.pos.X;
@@ -428,39 +431,39 @@ namespace Graphs
                 dist = Math.Abs(a * mPos.X + b * mPos.Y + c) / denom;
                 if (dist > 5) continue;
 
-                distToMouseA = EvalDistance(edge.v1.pos, mPos);
+                distToMouseA = EvalDistance(edge.v1.pos, mPos); // vzdálenost myši od vrcholů
                 distToMouseB = EvalDistance(edge.v2.pos, mPos);
 
-                if (denom > distToMouseA && denom > distToMouseB)
+                if (denom > distToMouseA && denom > distToMouseB) // jestli je na hraně a ne pouze na přímce hrany
                     return edge;
             }
 
             return null;
         }
 
-        public Vertex HoveredV(Vertex vertex)
+        public Vertex HoveredV(Vertex vertex) // ovládá škálování hovered vrcholu
         {
-            if (vertex == hVertex) return vertex;
+            if (vertex == hVertex) return vertex; // pokud jsem už vrchol škáloval, vrátím
             Graphics g = splitContainer.Panel1.CreateGraphics();
 
-            if (vertex == null)
+            if (vertex == null) // můj kurzor už není na hovered vrcholu
             {
                 vertexLabel.Visible = false;
                 hVertex.radius = 15;
                 DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
             }
-            else
+            else // můj kurzor je na vrcholu
             {
-                if (hVertex != null)
+                if (hVertex != null) // přešel jsem z vrcholu na vrchol
                 {
                     hVertex.radius = 15;
                     DrawVertex(g, hVertex.pos, new Size(42, 42), prevState);
                 }
-
+               
                 vertexLabel.Location = new Point(vertex.pos.X - 10, vertex.pos.Y - 10);
                 vertexLabel.Text = $"{vertex.num}";
                 vertexLabel.Size = new Size((vertexLabel.Text.Length + 1) * 10, 20);
-                vertexLabel.Visible = true;
+                vertexLabel.Visible = true; // zobrazím číslo vrcholu
 
                 vertex.radius = 20;
                 DrawVertex(g, vertex.pos, new Size(40, 40));
@@ -469,19 +472,19 @@ namespace Graphs
             return vertex;
         }
 
-        public Edge HoveredE(Edge edge)
+        public Edge HoveredE(Edge edge) // ovládá škálování hovered hrany
         {
-            if (drag == true || edge == hEdge) return edge;
+            if (drag == true || edge == hEdge) return edge; // neškáluji pokud zrovna táhnu hranu
             Graphics g = splitContainer.Panel1.CreateGraphics();
 
-            if (edge == null)
+            if (edge == null) // nemám kurzor na hraně, přemaluji na počáteční stav
             {
                 DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
                 if (hEdge.oriented) { DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[1]);  DrawEdge(g, new Pen(Color.White, 7), hEdge.ptsArrow[0], hEdge.ptsArrow[2]);}                
             }
             else
             {
-                if (hEdge != null)
+                if (hEdge != null) // přešel jsem z hrany na hranu
                 {
                     DrawEdge(g, penPrevState, hEdge.v1.pos, hEdge.v2.pos);
                 }
@@ -492,91 +495,99 @@ namespace Graphs
             return edge;
         }
 
-        /************* TIMERS **************/
-        private void dragUpdate_Tick(object sender, EventArgs e)
+        /************* DRIVING TIMERS **************/
+        private void dragUpdate_Tick(object sender, EventArgs e) // timer pro přemalovávání tažené hrany
         {
-            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition))
+            if (prevMousePos != splitContainer.Panel1.PointToClient(MousePosition)) // pokud nemám myš na stejném místě
             {
                 Graphics g = splitContainer.Panel1.CreateGraphics();
                 Pen whtPen = new Pen(Color.White, 10);
 
-                if (hVertex != null)
+                if (hVertex != null) // pokud mám myš na vrcholu
                 { 
-                    if (hVertex.pos != prevMousePos)
+                    if (hVertex.pos != prevMousePos) // pokud už zde není hrana namalovaná, přitáhnu konec hrany jako magnet ke středu vrcholu
                     {
                         DrawEdge(g, penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y));
                         DrawVertex(g, hVertex.pos, new Size(40, 40));
                         prevMousePos = hVertex.pos;
                     }
                 }
-                else { DrawEdge(g, penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y)); prevMousePos = splitContainer.Panel1.PointToClient(MousePosition); }
+                else // následuje pohyb myši
+                { 
+                    DrawEdge(g, penPrevState, pos, new Point(prevMousePos.X, prevMousePos.Y));
+                    prevMousePos = splitContainer.Panel1.PointToClient(MousePosition);
+                }
 
                 DrawEdge(g, whtPen, pos, prevMousePos);
             }
         }
 
-        private void fixedUpdate_Tick(object sender, EventArgs e)
+        private void fixedUpdate_Tick(object sender, EventArgs e) // kontroluje, jestli není kurzor na vrcholu nebo hraně
         {
             Point mPos = splitContainer.Panel1.PointToClient(MousePosition);
             hVertex = HoveredV(GetHoveredVertex(mPos));
-            if (hVertex != null && hEdge == null) return;
+            if (hVertex != null && hEdge == null) return; // pokud existuje hovered vrchol a neexistuje hovered hrana, vrátím
             hEdge = HoveredE(GetHoveredEdge(mPos));
         }
 
-        /************* CLICKY THINGS **************/
-        private void fixedUpdate_Start(object sender, EventArgs e) { fixedUpdate.Start(); }
-        private void fixedUpdate_End(object sender, EventArgs e) { fixedUpdate.Stop(); }
-        private void copyBtn_Click(object sender, EventArgs e) { Clipboard.SetText(MatrixToString(vertices.Count)); }
-        private void insertBtn_Click(object sender, EventArgs e) { if (drag == false) InsertMatrix(pasteBox.Text); }
+        /************* EVENT THINGS **************/
+        private void fixedUpdate_Start(object sender, EventArgs e) { fixedUpdate.Start(); } // pokud kurzor vejde na Panel1, spustí se
+        private void fixedUpdate_End(object sender, EventArgs e) { fixedUpdate.Stop(); } // pokud kurzor opustí Panel1
+        private void copyBtn_Click(object sender, EventArgs e) { Clipboard.SetText(MatrixToString(vertices.Count)); } // zkopíruje vytvořenou matici sousednosti
+        private void insertBtn_Click(object sender, EventArgs e) { if (drag == false) InsertMatrix(pasteBox.Text); } // pokud se netáhne hrana, předá insertlý text
+        private void Form1_Resize(object sender, EventArgs e) { PaintOver(splitContainer.Panel1.CreateGraphics()); } // pokud se přeškáluje okno, přemaluje se graf
+        private void Form1_LocationChanged(object sender, EventArgs e) { PaintOver(splitContainer.Panel1.CreateGraphics()); } // pokud se změní lokace okna, přemaluje se graf
 
         /************* METHODS FOR WEIGHTS **************/
-        public void StopWriting() // nemůžu mít obousměrny hrany (pouze neorientované -> změnit!)
+        public void StopWriting() // zastaví psaní do weightLabelu (váha hrany)
         {
             KeyPreview = false;
             writeTimer.Stop();
-            writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
+            writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", ""); // vyčistí
 
-            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = $"{writingOn.weight}"; return; }
-            else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
+            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = $"{writingOn.weight}"; return; } // pokud je prázdný
+            else writingOn.weight = int.Parse(writingOn.weightLabel.Text); // pokud ne, přečte číslo a uloží ho
 
-            writingOn.weightLabel.Text = $"{writingOn.weight}";
+            writingOn.weightLabel.Text = $"{writingOn.weight}"; // text nastavím na váhu hrany
 
-            if (writingOn.oriented == true)
+            if (writingOn.oriented == true) // pokud je přepisovaná hrana orientovaná, přepíšu pouze jedno místo v matici
             {
                 if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
                 else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
             }
             else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, writingOn.weight);
 
-            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
+            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height); // přeškáluji label
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
-        private void writeTimer_Tick(object sender, EventArgs e)
+        
+        private void writeTimer_Tick(object sender, EventArgs e) // kosmetický timer, který bliká s '_', pro efekt aktivního psaní
         {
             int lastIndex = writingOn.weightLabel.Text.Length - 1;
             if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text[lastIndex] != '_') writingOn.weightLabel.Text += "_";
             else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "");
         }
-        private void Form1_KeyPress(object sender, KeyPressEventArgs e)
+        
+        private void Form1_KeyPress(object sender, KeyPressEventArgs e) // zachycuje psané znaky
         {
             int i;
-            if (int.TryParse(e.KeyChar.ToString(), out i) || e.KeyChar == '-')
+            if (int.TryParse(e.KeyChar.ToString(), out i) || e.KeyChar == '-') // pokud je vstup číslem nebo minus
             {
                 if (e.KeyChar == '-') { if (writingOn.weightLabel.Text == "" || writingOn.weightLabel.Text == "_") writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + "-"; }
                 else writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", "") + Convert.ToString(i);
             }
-            else if (e.KeyChar == (char)Keys.Back)
+            else if (e.KeyChar == (char)Keys.Back) // backspace
             {
                 string s = writingOn.weightLabel.Text.Replace("_", "");
                 if (writingOn.weightLabel.Text.Length != 0) writingOn.weightLabel.Text = s.Remove(s.Length - 1);
             }
-            else StopWriting();
+            else StopWriting(); // jiná klávesa psaní ukončí
 
-            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height);
+            writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height); // aktivně resizuju
         }
 
         /************* AUXILIARY FUNCTIONS **************/
-        public bool validDistances(Point pos, int criticalDist)
+        public bool validDistances(Point pos, int criticalDist) // zkontroluje, jestli jsou všechny vrcholy vzdáleny od pos alespoň o criticalDist
         {
             foreach (Vertex vertex in vertices)
             {
@@ -586,7 +597,7 @@ namespace Graphs
             return true;
         }
 
-        public void CapturePreviousState()
+        public void CapturePreviousState() // zachytí stav tvořeného grafu
         {
             TextureBrush TakeAScreenshot()
             {
@@ -595,22 +606,22 @@ namespace Graphs
                 return new TextureBrush(bmpPrevState);
             }
 
-            prevState = TakeAScreenshot();
-            penPrevState = new Pen(prevState, 15);
+            prevState = TakeAScreenshot(); // jako TextureBrush
+            penPrevState = new Pen(prevState, 15); // jako Pen
         }
 
-        public float EvalDistance(Point a, Point b)
+        public float EvalDistance(Point a, Point b) // vyhodnotí vzdálenost mezi dvěma body
         {
             return (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
         }
 
-        public void ScaleVector(int mag, ref int u1, ref int u2)
+        public void ScaleVector(int mag, ref int u1, ref int u2) // přeškáluje vektor na vzdálenost mag
         {
             float k = (float)Math.Sqrt(mag * mag / ((float)u1 * u1 + (float)u2 * u2));
             u1 = (int)(k * u1); u2 = (int)(k * u2);
         }
 
-        public Point GetTheMiddle(Point a, Point b)
+        public Point GetTheMiddle(Point a, Point b) // vrátí prostřední bod mezi 'a' a 'b'
         {
             Point vektor = new Point((b.X - a.X) / 2, (b.Y - a.Y) / 2);
             if (EvalDistance(new Point(a.X + vektor.X, a.Y + vektor.Y), b) < EvalDistance(a, b)) return new Point(a.X + vektor.X, a.Y + vektor.Y);
@@ -618,7 +629,7 @@ namespace Graphs
         }
 
         /************* METHODS FOR ALGORITHMS **************/
-        public void switchLabels()
+        public void switchLabels() // mení text a skrývá objekty při přepínání mezi algoritmy
         {
             switch (alg)
             {
@@ -664,14 +675,14 @@ namespace Graphs
             resultMatrix.Text = "[...]";
         }
 
-        private void rightBtn_Click(object sender, EventArgs e)
+        private void rightBtn_Click(object sender, EventArgs e) // přepne na algoritmus vpravo
         {
             alg = (alg + 1) % 9;
             algLabel.Text = algoNames[alg];
             switchLabels();
         }
 
-        private void leftBtn_Click(object sender, EventArgs e)
+        private void leftBtn_Click(object sender, EventArgs e) // přepne na algoritmus vlevo
         {
             alg -= 1;
             if (alg < 0) alg += 9;
@@ -679,17 +690,17 @@ namespace Graphs
             switchLabels();
         }
 
-        private void startBtn_Click(object sender, EventArgs e)
+        private void startBtn_Click(object sender, EventArgs e) // spustí algoritmus a vypíše výsledek
         {
             if (vertices.Count == 0) return;
             bool orientedGraph = false;
-            foreach (Edge edge in edges) if (edge.oriented == true) orientedGraph = true;
-            int source = comboVertices.SelectedIndex;
+            foreach (Edge edge in edges) if (edge.oriented == true) orientedGraph = true; // zkontroluji, jestli je graf orientovaný
+            int source = comboVertices.SelectedIndex; // jako source uloží index vybraného vrcholu v comboBoxu
             if (source == -1) source = 0;
             
-            AlgObj = new Algorithms(adjMatrix, vertices.Count);
+            AlgObj = new Algorithms(adjMatrix, vertices.Count); // iniciuju nový objekt Algorithms, kterému předám matici sousednosti
 
-            switch (alg)
+            switch (alg) // spustím specifický algoritmus
             {
                 case 0: // DFS
                     resultLabel.Text = "[ " + AlgObj.soloDFS(source) + "]";
@@ -730,7 +741,7 @@ namespace Graphs
             }
         }
 
-        private void exampleBtn_Click(object sender, EventArgs e)
+        private void exampleBtn_Click(object sender, EventArgs e) // nahraje ukázkový graf pro specifický algoritmus
         {
             switch (alg)
             {
@@ -766,6 +777,9 @@ namespace Graphs
     }
 
 
+    /// <summary>
+    /// Třída vrcholu.
+    /// </summary>
     public class Vertex
     {
         public int num;
@@ -779,12 +793,15 @@ namespace Graphs
         }
     }
 
+    /// <summary>
+    /// Třída hrany.
+    /// </summary>
     public class Edge
     {
         public Vertex v1;
         public Vertex v2;
         public bool oriented;
-        public Point[] ptsArrow;
+        public Point[] ptsArrow; // zaznamená 3 body - vrchol, do kterého jde orientovaná hrana a dva body odkud se kreslí šipka
         public int weight;
         public Label weightLabel;
 
@@ -803,17 +820,22 @@ namespace Graphs
         }
     }
 
+
+    /// <summary>
+    /// Třída binární haldy s prvky tvaru immuntable tuple integerů,
+    /// která zaznamenává pozici každého prvku.
+    /// </summary>
     public class Heap
     {
-        public List<(int, int)> heap = new List<(int, int)>{ (0, 0) };
+        public List<(int, int)> heap = new List<(int, int)>{ (0, 0) }; // první prvek nepoužívá
         public int[] pos;
 
         public Heap(int maxKey)
         {
-            pos = new int[maxKey + 1];
+            pos = new int[maxKey + 1]; // jaký bude maximální klíč
         }
 
-        public void Insert((int, int) element)
+        public void Insert((int, int) element) // insertne nový prvek
         {
             heap.Add(element);
             int j = heap.Count - 1;
@@ -821,7 +843,7 @@ namespace Graphs
             BubbleUp(j);
         }
 
-        public void BubbleUp(int j)
+        private void BubbleUp(int j) // bublání směrem nahoru
         {
             while (j > 1 && heap[j].Item2 < heap[j / 2].Item2)
             {
@@ -833,7 +855,7 @@ namespace Graphs
             }
         }
 
-        public int ExtractMin()
+        public int ExtractMin() // popne minimum a přebublá dolu
         {
             if (heap.Count == 1) return -1;
 
@@ -865,7 +887,7 @@ namespace Graphs
             return min;
         }
 
-        public void DecreaseKey(int key, int value)
+        public void DecreaseKey(int key, int value) // změní hodnotu u specifického klíče
         {
             int index = pos[key];
             if (index == 0) return;
@@ -874,17 +896,15 @@ namespace Graphs
             BubbleUp(index);
         }
 
-        public bool Empty()
+        public bool Empty() // vrátí false pokud je halda neprázdná
         {
             if (heap.Count > 1) return false;
             else return true;
         }
     }
 
-
     /// <summary>
-    /// This class contains specific graph algorithms that are made
-    /// to communicate with the Form1.
+    /// Třída obsahující specifické grafové algoritmy komunikující s Form1.
     /// </summary>
     public class Algorithms
     {
@@ -894,12 +914,12 @@ namespace Graphs
 
         public Algorithms(int[,] adjMatrix, int numVertices)
         {
-            adjM = GetMatrix(adjMatrix, numVertices);
-            nasled = seznamNasledniku(adjM);
-            n = adjM.GetLength(0);
+            adjM = GetMatrix(adjMatrix, numVertices); // uloží určitou část matice sousednosti
+            nasled = seznamNasledniku(adjM); // vytvoří seznam následníků
+            n = adjM.GetLength(0); // uloží počet vrcholů
         }
 
-        int[,] GetMatrix(int[,] adjMatrix, int numVertices)
+        int[,] GetMatrix(int[,] adjMatrix, int numVertices) // přepíše specifický čtverec matice sousednosti
         {
             int[,] matrix = new int[numVertices, numVertices];
 
@@ -910,11 +930,11 @@ namespace Graphs
             return matrix;
         }
 
-        int[][] seznamNasledniku(int[,] adjMatrix)
+        int[][] seznamNasledniku(int[,] adjMatrix) // přepíše matici sousednosti do seznamu následníků
         {
             int size = adjMatrix.GetLength(0);
             int[][] jag = new int[size][];
-            List<int> temp;
+            List<int> temp; // dočasný List pro každou řádku matice
 
             for (int i = 0; i < size; i++)
             {
@@ -937,7 +957,7 @@ namespace Graphs
             return jag;
         }
 
-        bool relax(int u, int v, ref int[] dist, ref int[] prev)
+        bool relax(int u, int v, ref int[] dist, ref int[] prev) // relaxování hrany
         {
             if (dist[u] + adjM[u, v] < dist[v])
             {
@@ -949,19 +969,21 @@ namespace Graphs
             return false;
         }
 
-        Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>> DFS()
+        Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, List<(int, int)>> DFS() // rozšířený podrobný DFS
         {
-            int c = 0; int order = 0;
+            int c = 0; int order = 0; // komponenta a pořadí
             int[] opened = new int[n]; int[] pred = new int[n]; int[] low = new int[n];
-            List<int> ends = new List<int>();
-            string stromy = "";
+            List<int> ends = new List<int>(); // vrcholy podle uzavření
+            string stromy = ""; // DFS stromy
 
             int[] p = new int[n]; int[] k = new int[n]; // casy otevreni a zavreni
 
-            List<(int, int)> zpet = new List<(int, int)>();
-            List<(int, int)> bridges = new List<(int, int)>();
+            List<(int, int)> zpet = new List<(int, int)>(); // zpětné hrany
+            List<(int, int)> dopred = new List<(int, int)>(); // dopředné
+            List<(int, int)> pric = new List<(int, int)>(); // příčné
+            List<(int, int)> bridges = new List<(int, int)>(); // mosty
 
-            void Visit(int u, ref int order, ref string stromy)
+            void Visit(int u, ref int order, ref string stromy) // rekurzivní funkce DFS
             {
                 opened[u] = 1; order += 1; p[u] = order; low[u] = infty;
 
@@ -973,15 +995,15 @@ namespace Graphs
                         stromy += $", {neigh + 1}";
                         Visit(neigh, ref order, ref stromy);
 
-                        if (low[neigh] >= p[neigh]) bridges.Add((u + 1, neigh + 1));
+                        if (low[neigh] >= p[neigh]) bridges.Add((u + 1, neigh + 1)); // je mostem
 
-                        low[u] = Math.Min(low[u], low[neigh]);
+                        low[u] = Math.Min(low[u], low[neigh]); // upravím parametr pro hledání mostů
                     }
                     else
                     {
                         if (opened[neigh] == 1)
                         {
-                            if (neigh != pred[u])
+                            if (neigh != pred[u]) // pokud není falešná zpětná
                             {
                                 low[u] = Math.Min(low[u], p[neigh]);
                                 zpet.Add((u, neigh)); // zpětná
@@ -989,8 +1011,8 @@ namespace Graphs
                         }
                         else
                         {
-                            if (p[u] < p[neigh]) { } // dopředná
-                            else { } // příčná
+                            if (p[u] < p[neigh]) dopred.Add((u, neigh)); // dopředná
+                            else pric.Add((u, neigh)); // příčná
                         }
                     }
                 }
@@ -1001,18 +1023,18 @@ namespace Graphs
 
             for (int i = 0; i < n; i++)
             {
-                if (opened[i] == 0)
+                if (opened[i] == 0) // pokud jsem vrchol 'i' nenavštívil
                 {
-                    c += 1;
+                    c += 1; // zvýším počet komponent
                     stromy += $"\nstrom_{c}: {i + 1}";
                     Visit(i, ref order, ref stromy);
                 }
             }
 
-            return new Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>>(stromy, p, k, ends, zpet, bridges);
+            return new Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, List<(int, int)>>(stromy, p, k, ends, zpet, bridges, dopred, pric);
         }
 
-        public string soloDFS(int source)
+        public string soloDFS(int source) // jednoduchý DFS algoritmus
         {
             string order = ""; int last = 0;
             int[] stack = new int[(n * (n - 1)) / 2]; // přesněji ((n - 1)*(n - 2) / 2) + 1
@@ -1038,13 +1060,13 @@ namespace Graphs
             return order;
         }
 
-        public string BFS(int source)
+        public string BFS(int source) // BFS algoritmus
         {
             string order = ""; int first = 0; int last = 0;
             int[] queue = new int[(n * (n - 1)) / 2];
             bool[] seen = new bool[n];
             queue[0] = source;
-
+            // udržuji first a last pro efekt fronty
             while (first <= last)
             {
                 int vertex = queue[first % queue.Length];
@@ -1062,27 +1084,27 @@ namespace Graphs
                 }
             }
 
-            return order;
+            return order; // vracím pouze pořadí vrcholů jako string
         }
 
-        public Tuple<int[], int[]> Dijkstra (int source)
+        public Tuple<int[], int[]> Dijkstra (int source) // algoritmus pro nalezení nejkratších vzdáleností od vybraného bodu
         {
-            if (containsNegativeEdges) return new Tuple<int[], int[]>(new int[] { -1 }, new int[] { -1 });
+            if (containsNegativeEdges) return new Tuple<int[], int[]>(new int[] { -1 }, new int[] { -1 }); // graf nesmí obsahovat záporné hrany
             int[] dist = new int[n];
             int[] prev = new int[n]; prev[source] = -1;
             Heap Q = new Heap(n - 1);
 
             for (int v = 0; v < n; v++)
             {
-                if (v != source) dist[v] = infty;
-                Q.Insert((v, dist[v]));
+                if (v != source) dist[v] = infty; // vzdálenost od source nastavím na nekonečna
+                Q.Insert((v, dist[v])); // vložím prvky do haldy
             }
                 
             while (Q.Empty() == false)
             {
                 int u = Q.ExtractMin();
 
-                foreach (int neigh in nasled[u])
+                foreach (int neigh in nasled[u]) // relaxuju pro každého souseda
                 {
                     if (relax(u, neigh, ref dist, ref prev)) Q.DecreaseKey(neigh, dist[neigh]);
                 }
@@ -1091,23 +1113,23 @@ namespace Graphs
             return new Tuple<int[], int[]>(dist, prev);
         }
 
-        public List<(int, int)> Bridges()
+        public List<(int, int)> Bridges() // vrací pouze mosty s využitím podrobného DFS
         {
             return DFS().Item6;
         }
 
-        public string Components()
+        public string Components() // vrací pouze komponenty s využitím podrobného DFS
         {
             return DFS().Item1;
         }
 
-        public int[] SSK()
+        public int[] SSK() // algoritmus pro nalezení silně souvislých komponent
         {
-            int[][] transpose(int[][] graph)
+            int[][] transpose(int[][] graph) // funkce pro transponování grafu
             {
                 int[][] Gt = new int[n][];
                 List<List<int>> temp = new List<List<int>>();
-                for (int i = 0; i < n; i++) temp.Add(new List<int>());
+                for (int i = 0; i < n; i++) temp.Add(new List<int>()); // vytvořím jagged array z Listů
 
                 for (int i = 0; i < n; i++)
                 {
@@ -1120,28 +1142,28 @@ namespace Graphs
 
                     for (int j = 0; j < temp[k].Count; j++)
                     {
-                        Gt[k][j] = temp[k][j];
+                        Gt[k][j] = temp[k][j]; // přepíši do normálního jagged array jako seznam následníků
                     }
                 }
 
                 return Gt;
             }
 
-            List<int> ends = DFS().Item4;
+            List<int> ends = DFS().Item4; // uložím vrcholy tak, jak se zavíraly při DFS
             int[][] Gt = transpose(nasled); int c = 0;
             bool[] seen = new bool[n];
             List<int> stack = new List<int>();
-            int[] sc_components = new int[n];
+            int[] sc_components = new int[n]; // zde uložím výsledné silně souvislé komponenty
 
-            for (int i = Gt.GetLength(0) - 1; i >= 0; i--)
+            for (int i = Gt.GetLength(0) - 1; i >= 0; i--) // odzadu
             {
-                if (seen[ends[i]]) continue;
+                if (seen[ends[i]]) continue; // pokud jsem vrchol už navštívil, přeskočím ho
 
                 seen[ends[i]] = true;
                 c += 1;
                 stack.Add(ends[i]);
 
-                while (stack.Count > 0)
+                while (stack.Count > 0) // každý DFS strom je teď jednou komponentou
                 {
                     int u = stack[stack.Count - 1];
                     stack.RemoveAt(stack.Count - 1);
@@ -1161,7 +1183,7 @@ namespace Graphs
             return sc_components;
         }
 
-        public int[,] FW ()
+        public int[,] FW () // Floyd-Warshallův algoritmus pro nalezení vzdáleností mezi každými dvěma vrcholy
         {
             int[,] D = new int[n, n];
 
@@ -1174,16 +1196,13 @@ namespace Graphs
                 }
             }
 
-            for (int k = 0; k < n; k++)
+            for (int k = 0; k < n; k++) 
             {
                 for (int i = 0; i < n; i++)
                 {
                     for (int j = 0; j < n; j++)
                     {
-                        if (D[i, k] + D[k, j] < D[i, j])
-                        {
-                            D[i, j] = D[i, k] + D[k, j];
-                        }
+                        D[i, j] = Math.Min(D[i, j], D[i, k] + D[k, j]);
                     }
                 }
             }
@@ -1191,14 +1210,14 @@ namespace Graphs
             return D;
         }
 
-        public int[,] Jarnik()
+        public int[,] Jarnik() // Jarníkův nebo také Primův algoritmus pro nalezení minimální kostry
         {
-            int[,] spanningTree = new int[n, n];
+            int[,] spanningTree = new int[n, n]; // výslednou kostru ukládám jako matici sousednosti
             int[] prev = new int[n];
             int[] key = new int[n];
-            Heap Q = new Heap(n - 1);
+            Heap Q = new Heap(n - 1); // abych zlepšil časovou složitost
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++) // inicializace
             {
                 key[i] = infty;
                 prev[i] = -1;
@@ -1211,10 +1230,10 @@ namespace Graphs
             while (Q.Empty() == false)
             {
                 int u = Q.ExtractMin();
-
+                // pokud má vrchol 'u' předka, je společně s ním hranou minimální kostry grafu
                 if (prev[u] != -1) { spanningTree[u, prev[u]] = adjM[u, prev[u]]; spanningTree[prev[u], u] = adjM[prev[u], u]; }
 
-                foreach (int neigh in nasled[u])
+                foreach (int neigh in nasled[u]) // upravuji "minimální váhy"
                 {
                     if (Q.pos[neigh] != 0 && adjM[u, neigh] < key[neigh])
                     {
@@ -1228,9 +1247,9 @@ namespace Graphs
             return spanningTree;
         }
 
-        public string TopologicalSort()
+        public string TopologicalSort() // topologické uspořádání
         {
-            void topoRecursion(int vertex, bool[] seen, List<int> reversed)
+            void topoRecursion(int vertex, bool[] seen, List<int> reversed) // prvně nalezne vrcholy v pořadí jak končí DFS
             {
                 seen[vertex] = true;
 
@@ -1242,18 +1261,18 @@ namespace Graphs
                 reversed.Add(vertex + 1);
             }
 
-            if (DFS().Item5.Count > 0) return "Contains a cycle!";
+            if (DFS().Item5.Count > 0) return "Contains a cycle!"; // zkontroluji, jestli je DAG
 
-            string output = "";
+            string output = ""; // výsledek vrátím string vrcholů ve správném pořadí
             bool[] seen = new bool[n];
-            List<int> reversed = new List<int>();
+            List<int> reversed = new List<int>(); // výsledek algoritmu je tento obrácený List
 
             for (int i = 0; i < n; i++)
             {
                 if (seen[i] == false) topoRecursion(i, seen, reversed);
             }
 
-            for (int k = reversed.Count - 1; k >= 0; k--)
+            for (int k = reversed.Count - 1; k >= 0; k--) // obrácený List je výsledkem
             {
                 output += $"{reversed[k]} ";
             }
