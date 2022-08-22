@@ -20,7 +20,9 @@ namespace Graphs
         Pen penPrevState; TextureBrush prevState; // pera pro přemalovávání na předchozí stav
         Point prevMousePos; Point pos; 
         Vertex hVertex = null; Edge hEdge = null; // hovered objekty
+
         Edge writingOn = null; // hrana, kde přepisuji její váhu
+        bool writingOnSecondWeight = false;
 
         Algorithms AlgObj;
         string[] algoNames = new string[9] { "DFS", "BFS", "Dijkstra", "Bridges", "Components", "SSK", "FW", "Jarnik", "Topological Sort" };
@@ -198,7 +200,7 @@ namespace Graphs
             {
                 string num = "";
 
-                while (index < strMatrix.Length && Char.IsDigit(strMatrix[index]))
+                while (index < strMatrix.Length && (Char.IsDigit(strMatrix[index]) || (num.Length == 0 && strMatrix[index] == '-')))
                 {
                     num += strMatrix[index];
                     index += 1;
@@ -326,10 +328,17 @@ namespace Graphs
                         if (closerV.pos == sender.ptsArrow[0]) // pokud je orientovanost jednoduchá, používají se vždy první tři údaje
                         {
                             for (int i = 0; i < 3; i++) sender.ptsArrow[i] = sender.ptsArrow[i + 3];
-                        }
+                            sender.ptsArrow[3] = new Point(-1, -1);
+                            sender.weight = sender.weightSnd;
+                        }                      
 
                         if (closerV == sender.v2) AdjustMatrix(sender.v1.num, closerV.num, 0, true);
                         else AdjustMatrix(sender.v2.num, closerV.num, 0, true);
+
+                        sender.weightSnd = 1; // vyresetuji druhou váhu
+                        sender.weightLabel.Text = $"{sender.weight}";
+                        sender.weightLabel.Size = new Size((sender.weightLabel.Text.Length + 1) * 10, sender.weightLabel.Size.Height);
+
 
                         sender.doubleOriented = false;
                     }
@@ -344,6 +353,9 @@ namespace Graphs
                         {
                             sender.doubleOriented = true; // získávám oboustrannou orientovanost
                             sender.ptsArrow[3] = closerV.pos; sender.ptsArrow[4] = new Point(pt.X - u2, pt.Y + u1); sender.ptsArrow[5] = new Point(pt.X + u2, pt.Y - u1);
+                            
+                            sender.weightLabel.Text = $"{sender.weight} {sender.weightSnd}";
+                            sender.weightLabel.Size = new Size((sender.weightLabel.Text.Length + 1) * 10, sender.weightLabel.Size.Height);
 
                             if (closerV == sender.v2) AdjustMatrix(sender.v1.num, closerV.num, sender.weightSnd, true);
                             else AdjustMatrix(sender.v2.num, closerV.num, sender.weightSnd, true);
@@ -368,6 +380,16 @@ namespace Graphs
             {
                 sender.weightLabel.Text = "";
                 writingOn = sender; // na jakou hranu píšu
+
+                if (sender.doubleOriented) // zkontroluji, jestli nebudu přepisovat druhou váhu
+                {
+                    Point closerPos;
+                    if (fromV1 < fromV2) closerPos = sender.v1.pos;
+                    else closerPos = sender.v2.pos;
+
+                    if (closerPos == sender.ptsArrow[3]) writingOnSecondWeight = true;
+                }
+
                 KeyPreview = true;
                 writeTimer.Start(); // spustím psací timer
             }        
@@ -476,7 +498,7 @@ namespace Graphs
 
                 denom = (float)Math.Sqrt(a * a + b * b);
                 dist = Math.Abs(a * mPos.X + b * mPos.Y + c) / denom;
-                if (dist > 5) continue;
+                if (dist > 7) continue;
 
                 distToMouseA = EvalDistance(edge.v1.pos, mPos); // vzdálenost myši od vrcholů
                 distToMouseB = EvalDistance(edge.v2.pos, mPos);
@@ -602,18 +624,31 @@ namespace Graphs
             writeTimer.Stop();
             writingOn.weightLabel.Text = writingOn.weightLabel.Text.Replace("_", ""); // vyčistí
 
-            if (writingOn.weightLabel.Text == "") { writingOn.weightLabel.Text = $"{writingOn.weight}"; return; } // pokud je prázdný
-            else writingOn.weight = int.Parse(writingOn.weightLabel.Text); // pokud ne, přečte číslo a uloží ho
+            if (writingOn.weightLabel.Text != "")// pokud je neprázdný, přečte číslo a uloží ho
+            {
+                if (writingOnSecondWeight) writingOn.weightSnd = int.Parse(writingOn.weightLabel.Text);
+                else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
+            }
 
-            writingOn.weightLabel.Text = $"{writingOn.weight}"; // text nastavím na váhu hrany
+            if (writingOn.doubleOriented) writingOn.weightLabel.Text = $"{writingOn.weight} {writingOn.weightSnd}"; // text nastavím na váhu hrany
+            else writingOn.weightLabel.Text = $"{writingOn.weight}";
 
             if (writingOn.oriented == true) // pokud je přepisovaná hrana orientovaná, přepíšu pouze jedno místo v matici
             {
-                if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
-                else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
+                if (writingOnSecondWeight)
+                {
+                    if (writingOn.ptsArrow[3] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weightSnd;
+                    else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weightSnd;
+                }
+                else
+                {
+                    if (writingOn.ptsArrow[0] == writingOn.v2.pos) adjMatrix[writingOn.v1.num - 1, writingOn.v2.num - 1] = writingOn.weight;
+                    else adjMatrix[writingOn.v2.num - 1, writingOn.v1.num - 1] = writingOn.weight;
+                } 
             }
             else AdjustMatrix(writingOn.v1.num, writingOn.v2.num, writingOn.weight);
 
+            writingOnSecondWeight = false;
             writingOn.weightLabel.Size = new Size((writingOn.weightLabel.Text.Length + 1) * 10, writingOn.weightLabel.Size.Height); // přeškáluji label
             matrix.Text = PrintMatrix(vertices.Count, adjMatrix);
         }
@@ -872,8 +907,8 @@ namespace Graphs
             weightLabel = new Label();
             weightLabel.Location = loc;
             weightLabel.ForeColor = Color.White;
-            weightLabel.Size = new Size(20, 20);
             weightLabel.Text = $"{weight}";
+            weightLabel.Size = new Size((weightLabel.Text.Length + 1) * 10, 20);
         }
     }
 
@@ -1244,7 +1279,7 @@ namespace Graphs
         {
             int[,] D = new int[n, n];
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++) // nastavím vzdálenosti mezi body, které nejsou spojeny hranou, na nekonečno
             {
                 for (int j = 0; j < n; j++)
                 {
