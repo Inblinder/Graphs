@@ -297,7 +297,7 @@ namespace Graphs
             float fromV1 = EvalDistance(pos, sender.v1.pos); // vyhodnotím vzdálenosti vrcholů od myši
             float fromV2 = EvalDistance(pos, sender.v2.pos); 
 
-            if (Math.Min(fromV1, fromV2) < 50) // pokud se kliklo dostatečně blízko k jednomu z vrcholů
+            if (Math.Min(fromV1, fromV2) < 40) // pokud se kliklo dostatečně blízko k jednomu z vrcholů
             {
                 Graphics g = splitContainer.Panel1.CreateGraphics();
                 Point pt; Vertex closerV; // pt - bod na hraně vzdálen od closerV (bližšího vrcholu) určitou vzdálenost
@@ -354,7 +354,7 @@ namespace Graphs
                             sender.doubleOriented = true; // získávám oboustrannou orientovanost
                             sender.ptsArrow[3] = closerV.pos; sender.ptsArrow[4] = new Point(pt.X - u2, pt.Y + u1); sender.ptsArrow[5] = new Point(pt.X + u2, pt.Y - u1);
                             
-                            sender.weightLabel.Text = $"{sender.weight} {sender.weightSnd}";
+                            sender.weightLabel.Text = $"{sender.weight}, {sender.weightSnd}";
                             sender.weightLabel.Size = new Size((sender.weightLabel.Text.Length + 1) * 10, sender.weightLabel.Size.Height);
 
                             if (closerV == sender.v2) AdjustMatrix(sender.v1.num, closerV.num, sender.weightSnd, true);
@@ -630,7 +630,7 @@ namespace Graphs
                 else writingOn.weight = int.Parse(writingOn.weightLabel.Text);
             }
 
-            if (writingOn.doubleOriented) writingOn.weightLabel.Text = $"{writingOn.weight} {writingOn.weightSnd}"; // text nastavím na váhu hrany
+            if (writingOn.doubleOriented) writingOn.weightLabel.Text = $"{writingOn.weight}, {writingOn.weightSnd}"; // text nastavím na váhu hrany
             else writingOn.weightLabel.Text = $"{writingOn.weight}";
 
             if (writingOn.oriented == true) // pokud je přepisovaná hrana orientovaná, přepíšu pouze jedno místo v matici
