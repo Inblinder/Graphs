@@ -1061,7 +1061,7 @@ namespace Graphs
             return false;
         }
 
-        Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, List<(int, int)>> DFS() // rozšířený podrobný DFS
+        Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, Tuple<List<(int, int)>>> DFS() // rozšířený podrobný DFS
         {
             int c = 0; int order = 0; // komponenta a pořadí
             int[] opened = new int[n]; int[] pred = new int[n]; int[] low = new int[n];
@@ -1123,7 +1123,7 @@ namespace Graphs
                 }
             }
 
-            return new Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, List<(int, int)>>(stromy, p, k, ends, zpet, bridges, dopred, pric);
+            return new Tuple<string, int[], int[], List<int>, List<(int, int)>, List<(int, int)>, List<(int, int)>, Tuple<List<(int, int)>>>(stromy, p, k, ends, zpet, bridges, dopred, new Tuple<List<(int, int)>>(pric));
         }
 
         public string soloDFS(int source) // jednoduchý DFS algoritmus
